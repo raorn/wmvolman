@@ -1,0 +1,11 @@
+wmVolMan 0.5
+~~~~~~~~~~~~
+
+Released August 6, 2005
+
+ - Major code cleanup
+ - Added bunch of icons (stolen from some GNOME icon theme)
+ - "Icon themes" support (libdockapp >= 0.6.0 is required)
+ - Updated to newer HAL API (0.5.0+)
+ - Support for pmount (http://www.piware.de/projects.shtml)
+
