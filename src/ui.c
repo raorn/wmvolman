@@ -547,11 +547,9 @@ static void wmvm_init_icons(char *theme)
 
 	if (NULL == theme || 0 == theme[0])
 		theme = "default";
-	fprintf(stderr, "theme: %s\n", theme);
 
 	if (home && *home)
 		usericondir = g_build_filename(home, ".wmvolman", NULL);
-	fprintf(stderr, "usericondir: %s\n", usericondir);
 
 	for (i = WMVM_ICON_UNKNOWN; i < WMVM_ICON_MAX; i++) {
 		int j;
@@ -564,19 +562,16 @@ static void wmvm_init_icons(char *theme)
 		for (p = usericondir, j = 2; j; p = globalicondir, j--) {
 			if (p && *p) {
 				file = g_build_filename(p, theme,  wmvm_device_icon_names[i].name, NULL);
-				fprintf(stderr, "checking %s ...", file);
 				if (file && *file && g_file_test(file, G_FILE_TEST_EXISTS)) {
 					pix = DAMakeShapedPixmapFromFile(file);
 					g_free(file);
 					file = NULL;
-					fprintf(stderr, " found\n");
 					break;
 				}
 				if (file) {
 					g_free(file);
 					file = NULL;
 				}
-				fprintf(stderr, " NOT found\n");
 			}
 		}
 		wmvm_device_icons[i] = (pix == NULL && wmvm_device_icon_names[i].fallback != -1 ) ? wmvm_device_icons[wmvm_device_icon_names[i].fallback] : pix;
