@@ -104,20 +104,12 @@ static void hal_device_added(LibHalContext *ctx, const char *udi)
 	int icon;
 	gboolean removable, mountable;
 
-	if (!libhal_device_property_exists(ctx, udi, "info.capabilities", NULL))
+	if (libhal_device_property_exists(ctx, udi, "volume.ignore", NULL) &&
+		libhal_device_get_property_bool(ctx, udi, "volume.ignore", NULL))
 		goto out;
 
-	/* see if it's a camera */
-	if (libhal_device_query_capability(ctx, udi, "camera", NULL)) {
-		/* yet... */
-		goto out;
-	}
-
-	if (!libhal_device_query_capability(ctx, udi, "block", NULL))
-		goto out;
-
-	/* is this a mountable volume ? */
-	if (!libhal_device_get_property_bool(ctx, udi, "block.is_volume", NULL))
+	if (!libhal_device_property_exists(ctx, udi, "wmvolman.should_display", NULL) ||
+		!libhal_device_get_property_bool(ctx, udi, "wmvolman.should_display", NULL))
 		goto out;
 
 	/* if it is a volume, it must have a device node */
@@ -134,23 +126,15 @@ static void hal_device_added(LibHalContext *ctx, const char *udi)
 	 * Does this device support removable media?  Note that we
 	 * check storage_device and not our own UDI
 	 */
-	if (!(removable = libhal_device_get_property_bool(ctx, storage_device, "storage.removable", NULL)) &&
-		!libhal_device_get_property_bool(ctx, storage_device, "storage.hotpluggable", NULL))
-		goto out_stdev;
+	removable = libhal_device_get_property_bool(ctx, storage_device, "storage.removable", NULL);
 
 	/* get the backing storage device */
 	storage_bus = libhal_device_get_property_string(ctx, storage_device, "storage.bus", NULL);
 	if (!storage_bus)
 		goto out_stdev;
 
-	/* folks, we have a new device! */
-	dbg("Added: %s\n", device);
-
-	mountable = (libhal_device_get_property_bool(ctx, storage_device, "storage.policy.should_mount", NULL) &&
-				 ((libhal_device_get_property_bool(ctx, udi, "volume.is_disc", NULL) &&
-				   libhal_device_get_property_bool(ctx, udi, "volume.disc.has_data", NULL)) ||
-				  (libhal_device_property_exists(ctx, udi, "volume.policy.should_mount", NULL) &&
-				   libhal_device_get_property_bool(ctx, udi, "volume.policy.should_mount", NULL))));
+	mountable = (libhal_device_property_exists(ctx, udi, "wmvolman.should_mount", NULL) &&
+				 libhal_device_get_property_bool(ctx, udi, "wmvolman.should_mount", NULL));
 
 	icon = WMVM_ICON_UNKNOWN;
 
@@ -213,6 +197,9 @@ static void hal_device_added(LibHalContext *ctx, const char *udi)
 
 	if (libhal_device_property_exists(ctx, udi, "volume.mount_point", NULL))
 		mountpoint = libhal_device_get_property_string(ctx, udi, "volume.mount_point", NULL);
+
+	/* folks, we have a new device! */
+	dbg("Device added: udi=%s, dev=%s, icon=%d, %sMOUNTABLE\n", udi, device, icon, mountable ? "" : "NOT");
 
 	wmvm_add_volume(udi, device, mountpoint, icon, mountable);
 
