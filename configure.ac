@@ -49,4 +49,5 @@ AC_OUTPUT([
 Makefile
 src/Makefile
 icons/Makefile
+fdi/Makefile
 ])

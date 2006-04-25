@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?> <!-- -*- SGML -*- -->
+
+<deviceinfo version="0.2">
+	<device>
+		<match key="block.is_volume" bool="true">
+			<match key="@block.storage_device:storage.removable" bool="true">
+				<merge key="wmvolman.should_display" type="bool">true</merge>
+				<match key="volume.fsusage" string="filesystem">
+					<merge key="wmvolman.should_mount" type="bool">true</merge>
+				</match>
+			</match>
+			<match key="@block.storage_device:storage.hotpluggable" bool="true">
+				<merge key="wmvolman.should_display" type="bool">true</merge>
+				<match key="volume.fsusage" string="filesystem">
+					<merge key="wmvolman.should_mount" type="bool">true</merge>
+				</match>
+			</match>
+		</match>
+	</device>
+</deviceinfo>
+<!-- vim: set ft=xml ts=2 sw=2: -->

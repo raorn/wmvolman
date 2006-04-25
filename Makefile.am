@@ -1,3 +1,3 @@
 EXTRA_DIST = bootstrap
 
-SUBDIRS = src icons
+SUBDIRS = src icons fdi
