@@ -52,6 +52,8 @@ gboolean wmvm_device_mount(char *device)
 	argv[1] = device;
 	argv[2] = NULL;
 
+	dbg("Mounting: %s %s", argv[0], argv[1]);
+
 	if (!g_spawn_async(g_get_home_dir(),
 						argv, NULL,
 						G_SPAWN_STDOUT_TO_DEV_NULL|G_SPAWN_STDERR_TO_DEV_NULL,
@@ -70,6 +72,8 @@ gboolean wmvm_device_umount(char *device)
 	argv[0] = BIN_UMOUNT;
 	argv[1] = device;
 	argv[2] = NULL;
+
+	dbg("Unmounting: %s %s", argv[0], argv[1]);
 
 	if (!g_spawn_async(g_get_home_dir(),
 						argv, NULL,
