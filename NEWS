@@ -1,3 +1,13 @@
+wmVolMan 0.6
+~~~~~~~~~~~~
+
+Released April 26, 2006
+
+ - Moved Should We Display It?/Should We Mount It? logic to HAL
+   fdi files, don't use *.policy.should_mount
+ - Better pmount detection (including pmount-hal), configurable
+   mount/umount arguments
+
 wmVolMan 0.5
 ~~~~~~~~~~~~
 

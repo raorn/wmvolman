@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
 
-AC_INIT([WM Volume Manager], [0.5], [raorn@altlinux.ru], [wmvolman])
+AC_INIT([WM Volume Manager], [0.6], [raorn@altlinux.ru], [wmvolman])
 AC_CONFIG_SRCDIR([src])
 AM_INIT_AUTOMAKE([dist-bzip2 no-dist-gzip])
 AM_CONFIG_HEADER([config.h])
