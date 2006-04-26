@@ -24,8 +24,8 @@
 
 #include <glib.h>
 
-gboolean wmvm_device_mount(char *device);
-gboolean wmvm_device_umount(char *device);
+gboolean wmvm_device_mount(char *udi, char *device);
+gboolean wmvm_device_umount(char *device, char *mountpoint);
 gboolean wmvm_do_hal_init(void);
 
 #endif

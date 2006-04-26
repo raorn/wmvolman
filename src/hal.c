@@ -43,13 +43,13 @@
 
 #define warn(fmt,arg...) g_warning("%s/%d: " fmt,__FILE__,__LINE__,##arg)
 
-gboolean wmvm_device_mount(char *device)
+gboolean wmvm_device_mount(char *udi, char *device)
 {
 	char *argv[3];
 	GError *error = NULL;
 
 	argv[0] = BIN_MOUNT;
-	argv[1] = device;
+	argv[1] = MOUNT_ARG;
 	argv[2] = NULL;
 
 	dbg("Mounting: %s %s\n", argv[0], argv[1]);
@@ -64,13 +64,13 @@ gboolean wmvm_device_mount(char *device)
 	return TRUE;
 }
 
-gboolean wmvm_device_umount(char *device)
+gboolean wmvm_device_umount(char *device, char *mountpoint)
 {
 	char *argv[3];
 	GError *error = NULL;
 
 	argv[0] = BIN_UMOUNT;
-	argv[1] = device;
+	argv[1] = UMOUNT_ARG;
 	argv[2] = NULL;
 
 	dbg("Unmounting: %s %s\n", argv[0], argv[1]);

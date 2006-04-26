@@ -313,9 +313,9 @@ static void wmvm_mountumount(void)
 {
 	if (current != NULL && current->device != NULL) {
 		if (current->mounted)
-			wmvm_device_umount(current->device);
+			wmvm_device_umount(current->device, current->mount_point);
 		else
-			wmvm_device_mount(current->device);
+			wmvm_device_mount(current->hal_udi, current->device);
 	}
 	wmvm_draw_button(pressed);
 	wmvm_refresh_window();

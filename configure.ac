@@ -10,23 +10,88 @@ AM_CONFIG_HEADER([config.h])
 AC_GNU_SOURCE
 AC_PROG_CC
 
-AC_ARG_ENABLE([pmount], AC_HELP_STRING([--disable-pmount], [don't use pmount (default is yes)]),
-	[ac_cv_use_pmount=$withval], [ac_cv_use_pmount=yes])
+AC_ARG_WITH([mount], AC_HELP_STRING([--with-mount=PROGRAM], [mount program (default is auto)]),
+	[ac_cv_mount=$withval], [ac_cv_mount=auto])
 
-if test "x$ac_cv_use_pmount" = "xyes"; then
-    AC_PATH_PROG([mount_path], [pmount], [no])
-    AC_PATH_PROG([umount_path], [pumount], [no])
-else
-    AC_PATH_PROG([mount_path], [mount], [no])
-    AC_PATH_PROG([umount_path], [umount], [no])
-fi
+AC_ARG_WITH([umount], AC_HELP_STRING([--with-umount=PROGRAM], [umount program (default is auto)]),
+	[ac_cv_umount=$withval], [ac_cv_umount=auto])
 
-if test "x$mount_path" = "xno" -o "x$umount_path" = "xno"; then
-    AC_MSG_FAILURE([unable to find suitable mount/umount program])
-fi
+case "$ac_cv_mount" in
+    auto|AUTO)
+	AC_PATH_PROG([PMOUNT_HAL], [pmount-hal], [no])
+	AC_PATH_PROG([PMOUNT],     [pmount], [no])
+	AC_PATH_PROG([MOUNT],      [mount], [no])
 
-AC_DEFINE_UNQUOTED([BIN_MOUNT], ["${mount_path}"], [mount program])
-AC_DEFINE_UNQUOTED([BIN_UMOUNT], ["${umount_path}"], [unmount program])
+	if test "x$PMOUNT_HAL" != "xno"; then
+	    mount_program="$PMOUNT_HAL"
+	    mount_arg="udi"
+	elif test "x$PMOUNT" != "xno"; then
+	    mount_program="$PMOUNT"
+	    mount_arg="device"
+	elif test "x$MOUNT" != "xno"; then
+	    mount_program="$MOUNT"
+	    mount_arg="device"
+	else
+	    AC_MSG_ERROR([unable to find suitable mount program])
+	fi
+	;;
+    /*)
+	mount_program="$ac_cv_mount"
+	AC_ARG_WITH([mount-arg], AC_HELP_STRING([--with-mount-arg], [argument for mount (udi, device)]),
+		[mount_arg="$withval"], [mount_arg=no])
+	case "$mount_arg" in
+	    udi|device)
+		;;
+	    *)
+		AC_MSG_ERROR([bad mount argument, use "udi" or "device"])
+		;;
+	esac
+	;;
+    *)
+	AC_MSG_ERROR([please specify full path for mount program or "auto"])
+	;;
+esac
+AC_MSG_CHECKING([for mount command])
+AC_MSG_RESULT([$mount_program %$mount_arg])
+
+case "$ac_cv_umount" in
+    auto|AUTO)
+	AC_PATH_PROG([PUMOUNT],    [pumount], [no])
+	AC_PATH_PROG([UMOUNT],     [umount], [no])
+
+	if test "x$PUMOUNT" != "xno"; then
+	    umount_program="$PUMOUNT"
+	    umount_arg="device"
+	elif test "x$UMOUNT" != "xno"; then
+	    umount_program="$UMOUNT"
+	    umount_arg="device"
+	else
+	    AC_MSG_ERROR([unable to find suitable umount program])
+	fi
+	;;
+    /*)
+	umount_program="$ac_cv_umount"
+	AC_ARG_WITH([umount-arg], AC_HELP_STRING([--with-umount-arg], [argument for umount (device, mountpoint)]),
+		[umount_arg="$withval"], [umount_arg=no])
+	case "$umount_arg" in
+	    device|mountpoint)
+		;;
+	    *)
+		AC_MSG_ERROR([bad umount argument, use "device" or "mountpoint"])
+		;;
+	esac
+	;;
+    *)
+	AC_MSG_ERROR([please specify full path for mount program or "auto"])
+	;;
+esac
+AC_MSG_CHECKING([for umount program])
+AC_MSG_RESULT([$umount_program %$umount_arg])
+
+AC_DEFINE_UNQUOTED([BIN_MOUNT], ["${mount_program}"], [mount program])
+AC_DEFINE_UNQUOTED([BIN_UMOUNT], ["${umount_program}"], [unmount program])
+AC_DEFINE_UNQUOTED([MOUNT_ARG], [${mount_arg}], [mount argument])
+AC_DEFINE_UNQUOTED([UMOUNT_ARG], [${umount_arg}], [umount argument])
 
 AC_PATH_XTRA
 AC_HEADER_STDC
