@@ -1,4 +1,4 @@
-fdidir = $(sysconfdir)/hal/information
+fdidir = $(sysconfdir)/hal/policy
 
 fdi_DATA = 95-wmvolman.fdi
 
