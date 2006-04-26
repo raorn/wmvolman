@@ -1,5 +1,5 @@
-fdidir = $(sysconfdir)/hal/policy
+fdidir = $(sysconfdir)/hal/fdi/policy
 
-fdi_DATA = 95-wmvolman.fdi
+fdi_DATA = 30-wmvolman.fdi
 
 EXTRA_DIST = $(fdi_DATA)
