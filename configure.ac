@@ -110,6 +110,17 @@ PKG_CHECK_MODULES(HAL, [hal >= 0.5.0])
 AC_SUBST(HAL_CFLAGS)
 AC_SUBST(HAL_LIBS)
 
+AC_ARG_ENABLE([Werror], AC_HELP_STRING([--disable-Werror], [do no add -Wall -Werror to CFLAGS]),
+	, [enable_Werror=yes])
+
+AC_MSG_CHECKING([wether to enable -Werror])
+if test "x$enable_Werror" = "xyes"; then
+    CFLAGS="$CFLAGS -Wall -Werror"
+    AC_MSG_RESULT([yes])
+else
+    AC_MSG_RESULT([no])
+fi
+
 AC_OUTPUT([
 Makefile
 src/Makefile
