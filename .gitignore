@@ -16,6 +16,7 @@ config.*
 configure
 depcomp
 install-sh
+ltmain.sh
 missing
 stamp-h1
 tags
