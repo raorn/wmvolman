@@ -1,0 +1,2 @@
+spec: wmvolman.spec
+tar.bz2: . name=@name@-@version@ base=@name@-@version@
