@@ -143,32 +143,40 @@ static void hal_device_added(LibHalContext *ctx, const char *udi)
 	icon = WMVM_ICON_UNKNOWN;
 
 	if (libhal_device_get_property_bool(ctx, udi, "volume.is_disc", NULL)) {
-		char *disc_type = NULL;
+		icon = WMVM_ICON_CD_UNKNOWN;
 
-		if (libhal_device_property_exists(ctx, udi, "volume.disc.type", NULL))
-			disc_type = libhal_device_get_property_string(ctx, udi, "volume.disc.type", NULL);
+		if (!mountable &&
+			libhal_device_property_exists(ctx, udi, "volume.disc.has_audio", NULL) &&
+			libhal_device_get_property_bool(ctx, udi, "volume.disc.has_audio", NULL)) {
+			icon = WMVM_ICON_CDAUDIO;
+		} else {
+			char *disc_type = NULL;
 
-		if (disc_type != NULL) {
-			if (!strcmp(disc_type, "cd_rom"))
-				icon = WMVM_ICON_CDROM;
-			else if (!strcmp(disc_type, "cd_r"))
-				icon = WMVM_ICON_CDR;
-			else if (!strcmp(disc_type, "cd_rw"))
-				icon = WMVM_ICON_CDRW;
-			else if (!strcmp(disc_type, "dvd_rom"))
-				icon = WMVM_ICON_DVDROM;
-			else if (!strcmp(disc_type, "dvd_ram"))
-				icon = WMVM_ICON_DVDRAM;
-			else if (!strcmp(disc_type, "dvd_r"))
-				icon = WMVM_ICON_DVDR;
-			else if (!strcmp(disc_type, "dvd_rw"))
-				icon = WMVM_ICON_DVDRW;
-			else if (!strcmp(disc_type, "dvd_plusr"))
-				icon = WMVM_ICON_DVDPLUSR;
-			else if (!strcmp(disc_type, "dvd_plusrw"))
-				icon = WMVM_ICON_DVDPLUSRW;
+			if (libhal_device_property_exists(ctx, udi, "volume.disc.type", NULL))
+				disc_type = libhal_device_get_property_string(ctx, udi, "volume.disc.type", NULL);
 
-			libhal_free_string(disc_type);
+			if (disc_type != NULL) {
+				if (!strcmp(disc_type, "cd_rom"))
+					icon = WMVM_ICON_CDROM;
+				else if (!strcmp(disc_type, "cd_r"))
+					icon = WMVM_ICON_CDR;
+				else if (!strcmp(disc_type, "cd_rw"))
+					icon = WMVM_ICON_CDRW;
+				else if (!strcmp(disc_type, "dvd_rom"))
+					icon = WMVM_ICON_DVDROM;
+				else if (!strcmp(disc_type, "dvd_ram"))
+					icon = WMVM_ICON_DVDRAM;
+				else if (!strcmp(disc_type, "dvd_r"))
+					icon = WMVM_ICON_DVDR;
+				else if (!strcmp(disc_type, "dvd_rw"))
+					icon = WMVM_ICON_DVDRW;
+				else if (!strcmp(disc_type, "dvd_plus_r"))
+					icon = WMVM_ICON_DVDPLUSR;
+				else if (!strcmp(disc_type, "dvd_plus_rw"))
+					icon = WMVM_ICON_DVDPLUSRW;
+
+				libhal_free_string(disc_type);
+			}
 		}
 	} else {
 		char *drive_type = NULL;
@@ -177,7 +185,10 @@ static void hal_device_added(LibHalContext *ctx, const char *udi)
 			drive_type = libhal_device_get_property_string(ctx, storage_device, "storage.drive_type", NULL);
 
 		if (drive_type != NULL) {
-			if (!strcmp(drive_type, "disk")) {
+			if (!strcmp(drive_type, "cdrom")) {
+				/* cdrom, but does not have volume.is_disk property? */
+				icon = WMVM_ICON_CD_UNKNOWN;
+			} else if (!strcmp(drive_type, "disk")) {
 				if (removable) {
 					icon = WMVM_ICON_REMOVABLE;
 
@@ -193,7 +204,13 @@ static void hal_device_added(LibHalContext *ctx, const char *udi)
 					else if (!strcmp(storage_bus, "ieee1394"))
 						icon = WMVM_ICON_HARDDISK_1394;
 				}
-			}
+			} /*else if (!strcmp(drive_type, "floppy")) {
+			}*/ /*else if (!strcmp(drive_type, "tape")) {
+			}*/ /*else if (!strcmp(drive_type, "compact_flash")) {
+			}*/ /*else if (!strcmp(drive_type, "memory_stick")) {
+			}*/ /*else if (!strcmp(drive_type, "smart_media")) {
+			}*/ /*else if (!strcmp(drive_type, "sd_mmc")) {
+			}*/
 
 			libhal_free_string(drive_type);
 		}

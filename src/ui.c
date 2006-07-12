@@ -54,7 +54,9 @@ static struct WMVMDeviceIconDesc {
 	enum WMVMIconName fallback;
 } wmvm_device_icon_names[WMVM_ICON_MAX] = {
 	{"unknown.xpm", -1},                         /* WMVM_ICON_UNKNOWN = 0, */
-	{"cdrom.xpm", WMVM_ICON_UNKNOWN},            /* WMVM_ICON_CDROM, */
+	{"cdrom-unknown.xpm", WMVM_ICON_UNKNOWN},    /* WMVM_ICON_CD_UNKNOWN, */
+	{"cdrom.xpm", WMVM_ICON_CD_UNKNOWN},         /* WMVM_ICON_CDROM, */
+	{"disc-audio.xpm", WMVM_ICON_CDROM},        /* WMVM_ICON_CDAUDIO, */
 	{"disc-cdr.xpm", WMVM_ICON_CDROM},           /* WMVM_ICON_CDR, */
 	{"disc-cdrw.xpm", WMVM_ICON_CDROM},          /* WMVM_ICON_CDRW, */
 	{"disc-dvdrom.xpm", WMVM_ICON_CDROM},        /* WMVM_ICON_DVDROM, */
