@@ -56,7 +56,7 @@ static struct WMVMDeviceIconDesc {
 	{"unknown.xpm", -1},                         /* WMVM_ICON_UNKNOWN = 0, */
 	{"cdrom-unknown.xpm", WMVM_ICON_UNKNOWN},    /* WMVM_ICON_CD_UNKNOWN, */
 	{"cdrom.xpm", WMVM_ICON_CD_UNKNOWN},         /* WMVM_ICON_CDROM, */
-	{"disc-audio.xpm", WMVM_ICON_CDROM},        /* WMVM_ICON_CDAUDIO, */
+	{"disc-audio.xpm", WMVM_ICON_CDROM},         /* WMVM_ICON_CDAUDIO, */
 	{"disc-cdr.xpm", WMVM_ICON_CDROM},           /* WMVM_ICON_CDR, */
 	{"disc-cdrw.xpm", WMVM_ICON_CDROM},          /* WMVM_ICON_CDRW, */
 	{"disc-dvdrom.xpm", WMVM_ICON_CDROM},        /* WMVM_ICON_DVDROM, */
@@ -70,7 +70,11 @@ static struct WMVMDeviceIconDesc {
 	{"removable-1394.xpm", WMVM_ICON_REMOVABLE}, /* WMVM_ICON_REMOVABLE_1394, */
 	{"harddisk.xpm", WMVM_ICON_UNKNOWN},         /* WMVM_ICON_HARDDISK, */
 	{"harddisk-usb.xpm", WMVM_ICON_HARDDISK},    /* WMVM_ICON_HARDDISK_USB, */
-	{"harddisk-1394.xpm", WMVM_ICON_HARDDISK}    /* WMVM_ICON_HARDDISK_1394, */
+	{"harddisk-1394.xpm", WMVM_ICON_HARDDISK},   /* WMVM_ICON_HARDDISK_1394, */
+	{"card-cf.xpm", WMVM_ICON_CARD_CF},          /* WMVM_ICON_CARD_CF, */
+	{"card-ms.xpm", WMVM_ICON_CARD_MS},          /* WMVM_ICON_CARD_MS, */
+	{"card-sdmmc.xpm", WMVM_ICON_CARD_SDMMC},    /* WMVM_ICON_CARD_SDMMC, */
+	{"card-sm.xpm", WMVM_ICON_CARD_SM}           /* WMVM_ICON_CARD_SM, */
 };
 
 typedef struct _WMVMVolume {

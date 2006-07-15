@@ -206,11 +206,15 @@ static void hal_device_added(LibHalContext *ctx, const char *udi)
 				}
 			} /*else if (!strcmp(drive_type, "floppy")) {
 			}*/ /*else if (!strcmp(drive_type, "tape")) {
-			}*/ /*else if (!strcmp(drive_type, "compact_flash")) {
-			}*/ /*else if (!strcmp(drive_type, "memory_stick")) {
-			}*/ /*else if (!strcmp(drive_type, "smart_media")) {
-			}*/ /*else if (!strcmp(drive_type, "sd_mmc")) {
-			}*/
+			}*/ else if (!strcmp(drive_type, "compact_flash")) {
+				icon = WMVM_ICON_CARD_CF;
+			} else if (!strcmp(drive_type, "memory_stick")) {
+				icon = WMVM_ICON_CARD_MS;
+			} else if (!strcmp(drive_type, "sd_mmc")) {
+				icon = WMVM_ICON_CARD_SDMMC;
+			} else if (!strcmp(drive_type, "smart_media")) {
+				icon = WMVM_ICON_CARD_SM;
+			}
 
 			libhal_free_string(drive_type);
 		}
