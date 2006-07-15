@@ -2,7 +2,7 @@
 
 Name: wmvolman
 Version: 0.6.1
-Release: alt1
+Release: alt2
 
 Summary: Window Maker Volume Manager
 Group: Graphical desktop/Window Maker
@@ -50,6 +50,11 @@ devices.
 %_datadir/%name/default/*.xpm
 
 %changelog
+* Sat Jul 15 2006 Sir Raorn <raorn@altlinux.ru> 0.6.1-alt2
+- GIT snapshot v0.6.1-g8dbe9c2
+ + Fixed dvd_plus_r/rw drive type detection
+ + Added CF/MS/SD/MMC/SM cards icons
+
 * Wed Apr 26 2006 Sir Raorn <raorn@altlinux.ru> 0.6.1-alt1
 - Fixed fdi location
 
