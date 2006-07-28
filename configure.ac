@@ -1,19 +1,19 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.57)
+AC_PREREQ(2.59)
 
-AC_INIT([WM Volume Manager], [0.6.1], [raorn@altlinux.ru], [wmvolman])
+AC_INIT([WM Volume Manager],[0.6.1],[raorn@altlinux.ru],[wmvolman])
 AC_CONFIG_SRCDIR([src])
 AM_INIT_AUTOMAKE([dist-bzip2 no-dist-gzip])
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 AC_GNU_SOURCE
 AC_PROG_CC
 
-AC_ARG_WITH([mount], AC_HELP_STRING([--with-mount=PROGRAM], [mount program (default is auto)]),
+AC_ARG_WITH([mount], AS_HELP_STRING(--with-mount=PROGRAM,mount program (default is auto)),
 	[ac_cv_mount=$withval], [ac_cv_mount=auto])
 
-AC_ARG_WITH([umount], AC_HELP_STRING([--with-umount=PROGRAM], [umount program (default is auto)]),
+AC_ARG_WITH([umount], AS_HELP_STRING(--with-umount=PROGRAM,umount program (default is auto)),
 	[ac_cv_umount=$withval], [ac_cv_umount=auto])
 
 case "$ac_cv_mount" in
@@ -37,7 +37,7 @@ case "$ac_cv_mount" in
 	;;
     /*)
 	mount_program="$ac_cv_mount"
-	AC_ARG_WITH([mount-arg], AC_HELP_STRING([--with-mount-arg], [argument for mount (udi, device)]),
+	AC_ARG_WITH([mount-arg], AS_HELP_STRING(--with-mount-arg,argument for mount (udi, device)),
 		[mount_arg="$withval"], [mount_arg=no])
 	case "$mount_arg" in
 	    udi|device)
@@ -71,7 +71,7 @@ case "$ac_cv_umount" in
 	;;
     /*)
 	umount_program="$ac_cv_umount"
-	AC_ARG_WITH([umount-arg], AC_HELP_STRING([--with-umount-arg], [argument for umount (device, mountpoint)]),
+	AC_ARG_WITH([umount-arg], AS_HELP_STRING(--with-umount-arg,argument for umount (device, mountpoint)),
 		[umount_arg="$withval"], [umount_arg=no])
 	case "$umount_arg" in
 	    device|mountpoint)
@@ -110,7 +110,7 @@ PKG_CHECK_MODULES(HAL, [hal >= 0.5.0])
 AC_SUBST(HAL_CFLAGS)
 AC_SUBST(HAL_LIBS)
 
-AC_ARG_ENABLE([Werror], AC_HELP_STRING([--disable-Werror], [do no add -Wall -Werror to CFLAGS]),
+AC_ARG_ENABLE([Werror], AS_HELP_STRING(--disable-Werror,do no add -Wall -Werror to CFLAGS),
 	, [enable_Werror=yes])
 
 AC_MSG_CHECKING([wether to enable -Werror])
@@ -121,9 +121,10 @@ else
     AC_MSG_RESULT([no])
 fi
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
 Makefile
 src/Makefile
 icons/Makefile
 fdi/Makefile
 ])
+AC_OUTPUT
