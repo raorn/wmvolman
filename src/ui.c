@@ -580,7 +580,8 @@ static void wmvm_init_icons(char *theme)
 				}
 			}
 		}
-		wmvm_device_icons[i] = (pix == NULL && wmvm_device_icon_names[i].fallback != -1 ) ? wmvm_device_icons[wmvm_device_icon_names[i].fallback] : pix;
+		if (pix != NULL || wmvm_device_icon_names[i].fallback != -1)
+			wmvm_device_icons[i] = (pix == NULL && wmvm_device_icon_names[i].fallback != -1 ) ? wmvm_device_icons[wmvm_device_icon_names[i].fallback] : pix;
 	}
 
 	if (usericondir) g_free(usericondir);
