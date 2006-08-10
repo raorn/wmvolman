@@ -1,0 +1,126 @@
+
+ Window Maker Volume Manager
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+wmVolMan is a small volume manager for Window Maker. It handles
+hotpluggable devices and removable media that are added to or
+removed from the system. It uses D-BUS and HAL to listen for new
+devices.
+
+
+COMPILATION
+
+To compile wmVolMan you must have following development libraries
+installed:
+
+libhal
+libdbus-glib
+libdockapp >= 0.6.0 (working DAMakeShapedPixmapFromFile() required)
+
+You will also need (or know) working mount/umount programs.
+wmVolMan checks availability of pmount-hal, pmount, mount and
+pumount, umount and chooses appropriate command line.
+
+
+INSTALLATION
+
+See INSTALL for detailed instructions.
+
+
+CONFIGURATION
+
+wmVolMan uses HAL device properties.  On startup it scans all HAL
+devices.  If device have "wmvolman.should_display" set to "true",
+this device will be displayed in wmVolMan window.  If device have
+"wmvolman.should_mount" set to true, you will be allowed to mount
+this device.
+
+These properties are set from 30-wmvolman.fdi file which is
+installed by default to ${prefix}/etc/hal/fdi/policy/ and used by
+HAL.  You can add you own rules that adds or removes "wmvolman.*"
+properties.  Refer to HAL documentation for more info.
+
+
+THEMES
+
+wmVolMan have limited themes support.  You can select theme by
+running wmVolMan with -d "themename" option.  It will look for icons
+in ~/.wmvolman/themename and ${prefix}/share/wmvolman/themename
+directories.  Supported icons are listed below, if there's no such
+file, wmVolMan fill "fall back" to more generic icon.
+
+unknown.xpm
+  unknown device, falls back to empty icon
+
+CD discs are recognized by "volume.is_disc" property set to "true".
+Disc type is read from "volume.disc.type" property.
+
+cdrom-unknown.xpm
+  unknown CD disk, falls back to unknown.xpm
+cdrom.xpm
+  plain CD-ROM disc with data, falls back to cdrom-unknown.xpm
+disc-audio.xpm
+  Audio-CD, falls back to cdrom.xpm
+disc-cdr.xpm
+  CD-R disc, falls back to cdrom.xpm
+disc-cdrw.xpm
+  CD-RW disc, falls back to cdrom.xpm
+disc-dvdrom.xpm
+  DVD disc, falls back to cdrom.xpm
+disc-dvdram.xpm
+  DVD-RAM disc, falls back to cdrom.xpm
+disc-dvdr.xpm
+  DVD-R disc, falls back to cdrom.xpm
+disc-dvdrw.xpm
+  DVD-RW disc, falls back to cdrom.xpm
+disc-dvdr-plus.xpm
+  DVD+R disc, falls back to cdrom.xpm
+disc-dvdrw-plus.xpm
+  DVD+RW disc, falls back to cdrom.xpm
+
+Harddisks are devices that have "storage.drive_type" of it's
+"block.storage_device" set to "disk".  Bus type is read from
+"storage.bus" property of it's "block.storage_device".
+
+harddisk.xpm
+  harddisk on unhandled bus, falls back to unknown.xpm
+harddisk-usb.xpm
+  harddisk on USB bus, falls back to harddisk.xpm
+harddisk-1394.xpm
+  harddisk on IEEE1394 bus, falls back to harddisk.xpm
+
+Removable devices are harddisks, that also have "storage.removable"
+of it's "block.storage_device" set to "true".
+
+removable.xpm
+  removable device on unhandled bus, falls back to harddisk.xpm
+removable-usb.xpm
+  removable device on USB bus, falls back to harddisk-usb.xpm
+removable-1394.xpm
+  removable device on IEEE1394 bus, falls back to harddisk-1394.xpm
+
+Memory cards are recognized by "storage.drive_type" of it's 
+"block.storage_device".  For now "compact_flash", "memory_stick",
+"sd_mmc" and "smart_media" are supported,
+
+card-cf.xpm
+  CompactFlash card, falls back to removable.xpm
+card-ms.xpm
+  MemoryStick card, falls back to removable.xpm
+card-sdmmc.xpm
+  SD/MMC card, falls back to removable.xpm
+card-sm.xpm
+  SmartMedia card, falls back to removable.xpm
+
+
+LICENSE
+
+All files in this distribution are released under GNU GENERAL PUBLIC
+LICENSE.  See COPYING for details.
+
+
+CONTACT AUTHOR
+
+Send bugreports, fixes, wishes etc. to Alexey I. Froloff
+<raorn@altlinux.ru>.
+
