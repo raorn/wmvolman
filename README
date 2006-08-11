@@ -11,11 +11,12 @@ devices.
 COMPILATION
 
 To compile wmVolMan you must have following development libraries
-installed:
+and tools installed:
 
-libhal
+libhal >= 0.5.0
 libdbus-glib
 libdockapp >= 0.6.0 (working DAMakeShapedPixmapFromFile() required)
+pkg-config
 
 You will also need (or know) working mount/umount programs.
 wmVolMan checks availability of pmount-hal, pmount, mount and
@@ -46,8 +47,10 @@ THEMES
 wmVolMan have limited themes support.  You can select theme by
 running wmVolMan with -d "themename" option.  It will look for icons
 in ~/.wmvolman/themename and ${prefix}/share/wmvolman/themename
-directories.  Supported icons are listed below, if there's no such
-file, wmVolMan fill "fall back" to more generic icon.
+directories.  Default theme is "default".
+
+Supported icons are listed below, if there's no such file, wmVolMan
+fill "fall back" to more generic icon.
 
 unknown.xpm
   unknown device, falls back to empty icon
