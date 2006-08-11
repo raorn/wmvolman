@@ -1,3 +1,13 @@
+wmVolMan 0.x
+~~~~~~~~~~~~
+
+Released  , 
+
+ - Added README, described HAL properties and theming
+ - Added CD-audio and "unknown" CD icons
+ - Added support for memory cards (CF/MS/SD/MMC/SM)
+ - Fixed and improved icon fallback
+
 wmVolMan 0.6.1
 ~~~~~~~~~~~~~~
 
