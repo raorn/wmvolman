@@ -1,8 +1,8 @@
 # vim: set ft=spec: -*- rpm-spec -*-
 
 Name: wmvolman
-Version: 0.6.1
-Release: alt2
+Version: 0.7
+Release: alt1
 
 Summary: Window Maker Volume Manager
 Group: Graphical desktop/Window Maker
@@ -50,6 +50,13 @@ devices.
 %_datadir/%name/default/*.xpm
 
 %changelog
+* Tue Aug 29 2006 Sir Raorn <raorn@altlinux.ru> 0.7-alt1
+- [0.7]
+ + Added README, described HAL properties and theming
+ + Added CD-audio and "unknown" CD icons
+ + Added support for memory cards (CF/MS/SD/MMC/SM)
+ + Fixed and improved icon fallback
+
 * Sat Jul 15 2006 Sir Raorn <raorn@altlinux.ru> 0.6.1-alt2
 - GIT snapshot v0.6.1-g8dbe9c2
  + Fixed dvd_plus_r/rw drive type detection
