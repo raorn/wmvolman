@@ -1,12 +1,12 @@
 # vim: set ft=spec: -*- rpm-spec -*-
 
 Name: wmvolman
-Version: 0.7
+Version: 0.8
 Release: alt1
 
 Summary: Window Maker Volume Manager
 Group: Graphical desktop/Window Maker
-License: GPL
+License: GPLv2
 Url: http://people.altlinux.ru/~raorn/wmvolman.html
 
 Packager: Sir Raorn <raorn@altlinux.ru>
@@ -43,13 +43,18 @@ devices.
 
 %files
 %doc AUTHORS NEWS README
-%config %_sysconfdir/hal/fdi//policy/*.fdi
+%config %_sysconfdir/hal/fdi/policy/*.fdi
 %_bindir/%name
 %dir %_datadir/%name/
 %dir %_datadir/%name/default/
 %_datadir/%name/default/*.xpm
 
 %changelog
+* Sun Sep 16 2007 Sir Raorn <raorn@altlinux.ru> 0.8-alt1
+- [0.8]
+ + "Device busy" indicator
+- License set to GPLv2
+
 * Tue Aug 29 2006 Sir Raorn <raorn@altlinux.ru> 0.7-alt1
 - [0.7]
  + Added README, described HAL properties and theming
