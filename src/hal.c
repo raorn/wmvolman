@@ -43,48 +43,6 @@
 
 #define warn(fmt,arg...) g_warning("%s/%d: " fmt,__FILE__,__LINE__,##arg)
 
-gboolean wmvm_device_mount(char *udi, char *device)
-{
-	char *argv[3];
-	GError *error = NULL;
-
-	argv[0] = BIN_MOUNT;
-	argv[1] = MOUNT_ARG;
-	argv[2] = NULL;
-
-	dbg("Mounting: %s %s\n", argv[0], argv[1]);
-
-	if (!g_spawn_async(g_get_home_dir(),
-						argv, NULL,
-						G_SPAWN_STDOUT_TO_DEV_NULL|G_SPAWN_STDERR_TO_DEV_NULL,
-						NULL, NULL, NULL, &error)) {
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
-gboolean wmvm_device_umount(char *device, char *mountpoint)
-{
-	char *argv[3];
-	GError *error = NULL;
-
-	argv[0] = BIN_UMOUNT;
-	argv[1] = UMOUNT_ARG;
-	argv[2] = NULL;
-
-	dbg("Unmounting: %s %s\n", argv[0], argv[1]);
-
-	if (!g_spawn_async(g_get_home_dir(),
-						argv, NULL,
-						G_SPAWN_STDOUT_TO_DEV_NULL|G_SPAWN_STDERR_TO_DEV_NULL,
-						NULL, NULL, NULL, &error)) {
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
 static dbus_bool_t hal_mainloop_integration(LibHalContext *ctx, DBusError *error)
 {
 	DBusConnection *dbus_connection;

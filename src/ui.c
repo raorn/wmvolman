@@ -78,13 +78,15 @@ static struct WMVMDeviceIconDesc {
 };
 
 typedef struct _WMVMVolume {
-	char *hal_udi;
+	char *udi;
 	char *device;
-	char *mount_point;
+	char *mountpoint;
 	char *display_name;
 	gboolean mountable;
 	DAShapedPixmap *icon;
 	gboolean mounted;
+	gboolean prog_running;
+	gboolean error;
 } WMVMVolume;
 
 static GList *wmvm_volumes = NULL;
@@ -118,6 +120,7 @@ static inline int IN_RECT(int __x, int __y, DARect *__r)
 #define STATE_NORMAL	0
 #define STATE_DOWN		1
 #define STATE_DISABLED	2
+#define STATE_RED		3
 
 static void wmvm_mountumount(void);
 static void wmvm_list_left(void);
@@ -185,16 +188,16 @@ static void wmvm_draw_char(char c, int pos)
 
 	if (c >= 'a' && c <= 'z') {
 		fromx = (c - 'a')*6 + 1;
-		fromy = 41;
+		fromy = 51;
 	} else if (c >= 'A' && c <= 'Z') {
 		fromx = (c - 'A')*6 + 1;
-		fromy = 41;
+		fromy = 51;
 	} else if ((p = strchr(syms, c)) != NULL) {
 		fromx = (p - syms)*6 + 1;
-		fromy = 51;
+		fromy = 61;
 	} else {
 		fromx = 115;
-		fromy = 51;
+		fromy = 61;
 	}
 
 	DASPCopyArea(buttons, master,
@@ -240,9 +243,12 @@ static void wmvm_update_button_state(WMVMVolume *vol)
 	GList *c;
 
 	if (vol != NULL && vol == current && (c = g_list_find(wmvm_volumes, vol)) != NULL) {
-		if (!vol->mountable) {
+		if (vol->prog_running) {
+			wmvm_buttons[BUTT_MOUNT].state = STATE_RED;
+		} else if (!vol->mountable) {
 			wmvm_buttons[BUTT_MOUNT].state = STATE_DISABLED;
-		} else if (wmvm_buttons[BUTT_MOUNT].state == STATE_DISABLED) {
+		} else if (wmvm_buttons[BUTT_MOUNT].state == STATE_DISABLED ||
+				   wmvm_buttons[BUTT_MOUNT].state == STATE_RED) {
 			wmvm_buttons[BUTT_MOUNT].state = STATE_NORMAL;
 		}
 		if (g_list_previous(c) == NULL) {
@@ -266,13 +272,14 @@ void wmvm_update_icon(void)
 		/* buttons */
 		/*wmvm_update_button_state(current);*/
 
-		if (pressed != -1 && wmvm_buttons[pressed].state == STATE_DISABLED)
+		if (pressed != -1 && (wmvm_buttons[pressed].state == STATE_DISABLED ||
+							  wmvm_buttons[pressed].state == STATE_RED))
 			pressed = -1;
 
 		if (current->mounted) {
-			DASPCopyArea(buttons, buttons, 54, 0, 28, 33, 0, 0);
+			DASPCopyArea(buttons, buttons, 54, 0, 28, 44, 0, 0);
 		} else {
-			DASPCopyArea(buttons, buttons, 82, 0, 28, 33, 0, 0);
+			DASPCopyArea(buttons, buttons, 82, 0, 28, 44, 0, 0);
 		}
 
 		wmvm_draw_button(BUTT_MOUNT);
@@ -315,13 +322,47 @@ static void wmvm_set_current(WMVMVolume *newcur)
 	}
 }
 
+static void wmvm_watch_child(GPid pid, gint status, WMVMVolume *data)
+{
+	if (data != NULL) {
+		data->prog_running = FALSE;
+
+		if (data == current) {
+			wmvm_update_button_state(current);
+			wmvm_update_icon();
+		}
+	}
+	g_spawn_close_pid(pid);
+}
+
 static void wmvm_mountumount(void)
 {
 	if (current != NULL && current->device != NULL) {
-		if (current->mounted)
-			wmvm_device_umount(current->device, current->mount_point);
-		else
-			wmvm_device_mount(current->hal_udi, current->device);
+		char *argv[3];
+		GPid pid;
+		GError *error = NULL;
+
+		if (current->mounted) {
+			argv[0] = BIN_UMOUNT;
+			argv[1] = current->UMOUNT_ARG;
+			argv[2] = NULL;
+		} else {
+			argv[0] = BIN_MOUNT;
+			argv[1] = current->MOUNT_ARG;
+			argv[2] = NULL;
+		}
+
+		if (g_spawn_async_with_pipes(g_get_home_dir(),
+									 argv, NULL,
+									 G_SPAWN_DO_NOT_REAP_CHILD|G_SPAWN_STDOUT_TO_DEV_NULL|G_SPAWN_STDERR_TO_DEV_NULL,
+									 NULL, NULL,
+									 &pid,
+									 NULL, NULL, NULL, &error)) {
+			current->prog_running = TRUE;
+			current->error = FALSE;
+			g_child_watch_add(pid, (GChildWatchFunc) wmvm_watch_child, current);
+		} else
+			current->error = TRUE;
 	}
 	wmvm_draw_button(pressed);
 	wmvm_refresh_window();
@@ -353,7 +394,8 @@ static void da_button_press(int button, int state, int x, int y)
 	case 1:
 		pressed = -1;
 		for (i = 0; i < sizeof(wmvm_buttons)/sizeof(wmvm_buttons[0]); i++)
-			if (wmvm_buttons[i].state != STATE_DISABLED && IN_RECT(x, y, &(wmvm_buttons[i].r)))
+			if (wmvm_buttons[i].state != STATE_DISABLED &&
+				wmvm_buttons[i].state != STATE_RED && IN_RECT(x, y, &(wmvm_buttons[i].r)))
 				pressed = i;
 
 		if (pressed != -1) {
@@ -405,9 +447,9 @@ static void wmvm_set_title(WMVMVolume *vol)
 {
 	gboolean needs_update = (current == vol);
 
-	if (vol->mount_point && *vol->mount_point) {
-		needs_update = needs_update && (vol->display_name != vol->mount_point);
-		vol->display_name = vol->mount_point;
+	if (vol->mountpoint && *vol->mountpoint) {
+		needs_update = needs_update && (vol->display_name != vol->mountpoint);
+		vol->display_name = vol->mountpoint;
 	} else {
 		needs_update = needs_update && (vol->display_name != vol->device);
 		vol->display_name = vol->device;
@@ -432,7 +474,7 @@ static WMVMVolume *wmvm_find_volume(const char *udi)
 
 	for (i = g_list_first(wmvm_volumes); i != NULL; i = g_list_next(i)) {
 		ret = i->data;
-		if (ret && strcmp(ret->hal_udi, udi) == 0)
+		if (ret && strcmp(ret->udi, udi) == 0)
 			break;
 	}
 
@@ -456,11 +498,13 @@ void wmvm_add_volume(const char *udi, const char *device, const char *mountpoint
 		return;
 
 
-	vol->hal_udi = strdup(udi);
+	vol->udi = strdup(udi);
 	vol->device = strdup(device);
 	if (mountpoint)
-		vol->mount_point = strdup(mountpoint);
+		vol->mountpoint = strdup(mountpoint);
 	vol->mountable = mountable;
+	vol->prog_running = FALSE;
+	vol->error = FALSE;
 	if (icon >= WMVM_ICON_UNKNOWN && icon < WMVM_ICON_MAX)
 		vol->icon = wmvm_device_icons[icon];
 	else
@@ -501,9 +545,9 @@ void wmvm_remove_volume(const char *udi)
 	}
 
 	wmvm_volumes = g_list_remove(wmvm_volumes, vol);
-	if (vol->hal_udi) free(vol->hal_udi);
+	if (vol->udi) free(vol->udi);
 	if (vol->device) free(vol->device);
-	if (vol->mount_point) free(vol->mount_point);
+	if (vol->mountpoint) free(vol->mountpoint);
 	free(vol);
 
 	wmvm_update_button_state(current);
@@ -532,10 +576,10 @@ void wmvm_volume_set_mount_point(const char *udi, const char *mountpoint)
 		return;
 
 
-	if (vol->mount_point) free(vol->mount_point);
-	vol->mount_point = NULL;
+	if (vol->mountpoint) free(vol->mountpoint);
+	vol->mountpoint = NULL;
 	if (mountpoint)
-		vol->mount_point = strdup(mountpoint);
+		vol->mountpoint = strdup(mountpoint);
 
 	wmvm_set_title(vol);
 	wmvm_refresh_window();
