@@ -39,12 +39,12 @@ devices.
 %make_build
 
 %install
-%makeinstall
+%make_install DESTDIR=%buildroot install
 
 %files
 %doc AUTHORS NEWS README
-%config %_sysconfdir/hal/fdi/policy/*.fdi
 %_bindir/%name
+%_datadir/hal/fdi/information/20thirdparty/*.fdi
 %dir %_datadir/%name/
 %dir %_datadir/%name/default/
 %_datadir/%name/default/*.xpm

@@ -10,6 +10,10 @@ AC_CONFIG_HEADERS([config.h])
 AC_GNU_SOURCE
 AC_PROG_CC
 
+AC_ARG_WITH([hal-fdi], AS_HELP_STRING(--with-hal-fdi=DIR,path to HAL information directory (default is ${datadir}/hal/fdi/information/20thirdparty)),
+	[HAL_FDI_DIR=$withval], [HAL_FDI_DIR=${datadir}/hal/fdi/information/20thirdparty])
+AC_SUBST(HAL_FDI_DIR)
+
 AC_ARG_WITH([mount], AS_HELP_STRING(--with-mount=PROGRAM,mount program (default is auto)),
 	[ac_cv_mount=$withval], [ac_cv_mount=auto])
 

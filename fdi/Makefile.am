@@ -1,4 +1,4 @@
-fdidir = $(sysconfdir)/hal/fdi/policy
+fdidir = @HAL_FDI_DIR@
 
 fdi_DATA = 30-wmvolman.fdi
 
