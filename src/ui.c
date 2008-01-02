@@ -554,6 +554,25 @@ void wmvm_remove_volume(const char *udi)
 	wmvm_update_icon();
 }
 
+void wmvm_remove_all_volumes(void)
+{
+	wmvm_set_current(NULL);
+
+	while (wmvm_volumes && wmvm_volumes->data) {
+		WMVMVolume *vol;
+		vol = wmvm_volumes->data;
+
+		wmvm_volumes = g_list_remove(wmvm_volumes, vol);
+		if (vol->udi) free(vol->udi);
+		if (vol->device) free(vol->device);
+		if (vol->mountpoint) free(vol->mountpoint);
+		free(vol);
+	}
+
+	wmvm_update_button_state(current);
+	wmvm_update_icon();
+}
+
 void wmvm_volume_set_mounted(const char *udi, gboolean mounted)
 {
 	WMVMVolume *vol;
