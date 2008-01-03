@@ -1,3 +1,12 @@
+wmVolMan 0.x
+~~~~~~~~~~~~
+
+Released  , 
+
+ - Move fdi file to ${datadir}/hal/fdi/information/20thirdparty/
+   as described in Hal specification
+ - Gracefully handle DBus and Hal restarts
+
 wmVolMan 0.8
 ~~~~~~~~~~~~
 
