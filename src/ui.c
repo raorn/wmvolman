@@ -87,6 +87,7 @@ typedef struct _WMVMVolume {
 	gboolean mounted;
 	gboolean prog_running;
 	gboolean error;
+	gboolean please_free_this_memory;
 } WMVMVolume;
 
 static GList *wmvm_volumes = NULL;
@@ -322,12 +323,29 @@ static void wmvm_set_current(WMVMVolume *newcur)
 	}
 }
 
+static void wmvm_free_volume(WMVMVolume *vol)
+{
+	if (vol == NULL)
+		return;
+
+	if (vol->prog_running) {
+		vol->please_free_this_memory = TRUE;
+	} else {
+		if (vol->udi) free(vol->udi);
+		if (vol->device) free(vol->device);
+		if (vol->mountpoint) free(vol->mountpoint);
+		free(vol);
+	}
+}
+
 static void wmvm_watch_child(GPid pid, gint status, WMVMVolume *data)
 {
 	if (data != NULL) {
 		data->prog_running = FALSE;
 
-		if (data == current) {
+		if (data->please_free_this_memory) {
+			wmvm_free_volume(data);
+		} else if (data == current) {
 			wmvm_update_button_state(current);
 			wmvm_update_icon();
 		}
@@ -497,7 +515,6 @@ void wmvm_add_volume(const char *udi, const char *device, const char *mountpoint
 	if (vol == NULL)
 		return;
 
-
 	vol->udi = strdup(udi);
 	vol->device = strdup(device);
 	if (mountpoint)
@@ -505,6 +522,7 @@ void wmvm_add_volume(const char *udi, const char *device, const char *mountpoint
 	vol->mountable = mountable;
 	vol->prog_running = FALSE;
 	vol->error = FALSE;
+	vol->please_free_this_memory = FALSE;
 	if (icon >= WMVM_ICON_UNKNOWN && icon < WMVM_ICON_MAX)
 		vol->icon = wmvm_device_icons[icon];
 	else
@@ -545,10 +563,7 @@ void wmvm_remove_volume(const char *udi)
 	}
 
 	wmvm_volumes = g_list_remove(wmvm_volumes, vol);
-	if (vol->udi) free(vol->udi);
-	if (vol->device) free(vol->device);
-	if (vol->mountpoint) free(vol->mountpoint);
-	free(vol);
+	wmvm_free_volume(vol);
 
 	wmvm_update_button_state(current);
 	wmvm_update_icon();
@@ -563,10 +578,7 @@ void wmvm_remove_all_volumes(void)
 		vol = wmvm_volumes->data;
 
 		wmvm_volumes = g_list_remove(wmvm_volumes, vol);
-		if (vol->udi) free(vol->udi);
-		if (vol->device) free(vol->device);
-		if (vol->mountpoint) free(vol->mountpoint);
-		free(vol);
+		wmvm_free_volume(vol);
 	}
 
 	wmvm_update_button_state(current);
