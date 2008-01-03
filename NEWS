@@ -1,7 +1,7 @@
-wmVolMan 0.x
+wmVolMan 0.9
 ~~~~~~~~~~~~
 
-Released  , 
+Released January 3, 2008
 
  - Move fdi file to ${datadir}/hal/fdi/information/20thirdparty/
    as described in Hal specification

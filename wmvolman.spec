@@ -1,7 +1,7 @@
 # vim: set ft=spec: -*- rpm-spec -*-
 
 Name: wmvolman
-Version: 0.8
+Version: 0.9
 Release: alt1
 
 Summary: Window Maker Volume Manager
@@ -50,6 +50,10 @@ devices.
 %_datadir/%name/default/*.xpm
 
 %changelog
+* Thu Jan 03 2008 Sir Raorn <raorn@altlinux.ru> 0.9-alt1
+- [0.9]
+ + Gracefully handle DBus and Hal restarts
+
 * Sun Sep 16 2007 Sir Raorn <raorn@altlinux.ru> 0.8-alt1
 - [0.8]
  + "Device busy" indicator
