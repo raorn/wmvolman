@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
 
 	DAParseArguments(argc, argv, op,
 					 sizeof(op)/sizeof(DAProgramOption),
-					 "WM Volume Manager by Sir Raorn <raorn@altlinux.org>\n",
-					 PACKAGE_VERSION);
+					 "",
+					 PACKAGE_NAME " version " PACKAGE_VERSION);
 
 	if (!wmvm_init_dockapp(dpyName, argc, argv, theme))
 		return 1;
