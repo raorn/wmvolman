@@ -65,6 +65,12 @@ static struct WMVMDeviceIconDesc {
 	{"disc-dvdrw.xpm", WMVM_ICON_DVDROM},            /* WMVM_ICON_DVDRW, */
 	{"disc-dvdr-plus.xpm", WMVM_ICON_DVDROM},        /* WMVM_ICON_DVDPLUSR, */
 	{"disc-dvdrw-plus.xpm", WMVM_ICON_DVDROM},       /* WMVM_ICON_DVDPLUSRW, */
+	{"disc-bd.xpm", WMVM_ICON_CDROM},                /* WMVM_ICON_BD, */
+	{"disc-bdr.xpm", WMVM_ICON_BD},                  /* WMVM_ICON_BDR, */
+	{"disc-bdre.xpm", WMVM_ICON_BD},                 /* WMVM_ICON_BDRE, */
+	{"disc-hddvd.xpm", WMVM_ICON_CDROM},             /* WMVM_ICON_HDDVD, */
+	{"disc-hddvdr.xpm", WMVM_ICON_HDDVD},            /* WMVM_ICON_HDDVDR, */
+	{"disc-hddvdrw.xpm", WMVM_ICON_HDDVD},           /* WMVM_ICON_HDDVDRW, */
 	{"harddisk.xpm", WMVM_ICON_UNKNOWN},             /* WMVM_ICON_HARDDISK, */
 	{"harddisk-usb.xpm", WMVM_ICON_HARDDISK},        /* WMVM_ICON_HARDDISK_USB, */
 	{"harddisk-1394.xpm", WMVM_ICON_HARDDISK},       /* WMVM_ICON_HARDDISK_1394, */
