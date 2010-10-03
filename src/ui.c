@@ -32,7 +32,7 @@
 #include <time.h>
 
 #include "ui.h"
-#include "hal.h"
+#include "udisks.h"
 
 #include "wmvolman-master.xpm"
 #include "wmvolman-buttons.xpm"
@@ -91,9 +91,8 @@ typedef struct _WMVMVolume {
 	gboolean mountable;
 	DAShapedPixmap *icon;
 	gboolean mounted;
-	gboolean prog_running;
+	gboolean busy;
 	gboolean error;
-	gboolean please_free_this_memory;
 } WMVMVolume;
 
 static GList *wmvm_volumes = NULL;
@@ -250,7 +249,7 @@ static void wmvm_update_button_state(WMVMVolume *vol)
 	GList *c;
 
 	if (vol != NULL && vol == current && (c = g_list_find(wmvm_volumes, vol)) != NULL) {
-		if (vol->prog_running) {
+		if (vol->busy) {
 			wmvm_buttons[BUTT_MOUNT].state = STATE_RED;
 		} else if (!vol->mountable) {
 			wmvm_buttons[BUTT_MOUNT].state = STATE_DISABLED;
@@ -334,59 +333,23 @@ static void wmvm_free_volume(WMVMVolume *vol)
 	if (vol == NULL)
 		return;
 
-	if (vol->prog_running) {
-		vol->please_free_this_memory = TRUE;
-	} else {
-		if (vol->udi) free(vol->udi);
-		if (vol->device) free(vol->device);
-		if (vol->mountpoint) free(vol->mountpoint);
-		free(vol);
-	}
-}
-
-static void wmvm_watch_child(GPid pid, gint status, WMVMVolume *data)
-{
-	if (data != NULL) {
-		data->prog_running = FALSE;
-
-		if (data->please_free_this_memory) {
-			wmvm_free_volume(data);
-		} else if (data == current) {
-			wmvm_update_button_state(current);
-			wmvm_update_icon();
-		}
-	}
-	g_spawn_close_pid(pid);
+	if (vol->udi) free(vol->udi);
+	if (vol->device) free(vol->device);
+	if (vol->mountpoint) free(vol->mountpoint);
+	free(vol);
 }
 
 static void wmvm_mountumount(void)
 {
 	if (current != NULL && current->device != NULL) {
-		char *argv[3];
-		GPid pid;
-		GError *error = NULL;
+		if (current->busy)
+			return;
 
 		if (current->mounted) {
-			argv[0] = BIN_UMOUNT;
-			argv[1] = current->UMOUNT_ARG;
-			argv[2] = NULL;
+			udisks_device_umount(current->udi);
 		} else {
-			argv[0] = BIN_MOUNT;
-			argv[1] = current->MOUNT_ARG;
-			argv[2] = NULL;
+			udisks_device_mount(current->udi);
 		}
-
-		if (g_spawn_async_with_pipes(g_get_home_dir(),
-									 argv, NULL,
-									 G_SPAWN_DO_NOT_REAP_CHILD|G_SPAWN_STDOUT_TO_DEV_NULL|G_SPAWN_STDERR_TO_DEV_NULL,
-									 NULL, NULL,
-									 &pid,
-									 NULL, NULL, NULL, &error)) {
-			current->prog_running = TRUE;
-			current->error = FALSE;
-			g_child_watch_add(pid, (GChildWatchFunc) wmvm_watch_child, current);
-		} else
-			current->error = TRUE;
 	}
 	wmvm_draw_button(pressed);
 	wmvm_refresh_window();
@@ -510,7 +473,7 @@ gboolean wmvm_is_managed_volume(const char *udi)
 	return (wmvm_find_volume(udi) != NULL);
 }
 
-void wmvm_add_volume(const char *udi, const char *device, const char *mountpoint, int icon, gboolean mountable)
+void wmvm_add_volume(const char *udi, const char *device, int icon, gboolean mountable)
 {
 	WMVMVolume *vol;
 
@@ -523,12 +486,9 @@ void wmvm_add_volume(const char *udi, const char *device, const char *mountpoint
 
 	vol->udi = strdup(udi);
 	vol->device = strdup(device);
-	if (mountpoint)
-		vol->mountpoint = strdup(mountpoint);
 	vol->mountable = mountable;
-	vol->prog_running = FALSE;
+	vol->busy = FALSE;
 	vol->error = FALSE;
-	vol->please_free_this_memory = FALSE;
 	if (icon >= WMVM_ICON_UNKNOWN && icon < WMVM_ICON_MAX)
 		vol->icon = wmvm_device_icons[icon];
 	else
@@ -591,35 +551,64 @@ void wmvm_remove_all_volumes(void)
 	wmvm_update_icon();
 }
 
-void wmvm_volume_set_mounted(const char *udi, gboolean mounted)
+void wmvm_volume_set_mount_status(const char *udi, const char *mountpoint, gboolean mounted)
 {
 	WMVMVolume *vol;
+	gboolean needs_update = FALSE;
 
 	if ((vol = wmvm_find_volume(udi)) == NULL)
 		return;
 
+	if (vol->mounted != mounted) {
+		vol->mounted = mounted;
 
-	vol->mounted = mounted;
+		wmvm_update_button_state(vol);
+		needs_update = TRUE;
+	}
 
-	wmvm_update_button_state(vol);
-	wmvm_update_icon();
+	if ((vol->mountpoint != NULL && mountpoint != NULL && strcmp(vol->mountpoint, mountpoint)) ||
+		(vol->mountpoint == NULL && mountpoint != NULL) ||
+		(vol->mountpoint != NULL && mountpoint == NULL)) {
+		if (vol->mountpoint) free(vol->mountpoint);
+		vol->mountpoint = NULL;
+		if (mountpoint)
+			vol->mountpoint = strdup(mountpoint);
+
+		wmvm_set_title(vol);
+		needs_update = TRUE;
+	}
+
+	if (needs_update)
+		wmvm_update_icon();
 }
 
-void wmvm_volume_set_mount_point(const char *udi, const char *mountpoint)
+void wmvm_volume_set_busy(const char *udi, gboolean busy)
 {
 	WMVMVolume *vol;
 
 	if ((vol = wmvm_find_volume(udi)) == NULL)
 		return;
 
+	if (vol->busy != busy) {
+		vol->busy = busy;
 
-	if (vol->mountpoint) free(vol->mountpoint);
-	vol->mountpoint = NULL;
-	if (mountpoint)
-		vol->mountpoint = strdup(mountpoint);
+		wmvm_update_button_state(vol);
+		wmvm_update_icon();
+	}
+}
 
-	wmvm_set_title(vol);
-	wmvm_refresh_window();
+void wmvm_volume_set_error(const char *udi, gboolean error)
+{
+	WMVMVolume *vol;
+
+	if ((vol = wmvm_find_volume(udi)) == NULL)
+		return;
+
+	if (vol->error != error) {
+		vol->error = error;
+
+		wmvm_update_icon();
+	}
 }
 
 static void wmvm_init_icons(char *theme)

@@ -56,11 +56,12 @@ enum WMVMIconName {
 
 void wmvm_update_icon(void);
 gboolean wmvm_is_managed_volume(const char *udi);
-void wmvm_add_volume(const char *udi, const char *device, const char *mountpoint, int icon, gboolean mountable);
+void wmvm_add_volume(const char *udi, const char *device, int icon, gboolean mountable);
 void wmvm_remove_volume(const char *udi);
 void wmvm_remove_all_volumes(void);
-void wmvm_volume_set_mounted(const char *udi, gboolean mounted);
-void wmvm_volume_set_mount_point(const char *udi, const char *mountpoint);
+void wmvm_volume_set_mount_status(const char *udi, const char *mountpoint, gboolean mounted);
+void wmvm_volume_set_busy(const char *udi, gboolean busy);
+void wmvm_volume_set_error(const char *udi, gboolean error);
 
 gboolean wmvm_init_dockapp(char *dpyName, int argc, char *argv[], char *theme);
 

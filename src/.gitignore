@@ -4,4 +4,8 @@
 .libs
 Makefile
 Makefile.in
+udisks-daemon-glue.h
+udisks-device-glue.h
+udisks-marshal.c
+udisks-marshal.h
 wmvolman

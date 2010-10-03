@@ -29,7 +29,7 @@
 #include <dockapp.h>
 
 #include "ui.h"
-#include "hal.h"
+#include "udisks.h"
 
 int main(int argc, char *argv[])
 {
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 	if (!wmvm_init_dockapp(dpyName, argc, argv, theme))
 		return 1;
 
-	if (!wmvm_do_hal_init())
+	if (!wmvm_do_udisks_init())
 		return 1;
 
 	wmvm_update_icon();

@@ -1,1 +1,1 @@
-SUBDIRS = src icons fdi
+SUBDIRS = src icons

@@ -1,5 +1,5 @@
 /*
- * hal.h - Window Maker Volume Manager, HAL integration
+ * udisks.h - Window Maker Volume Manager, UDisks integration
  *
  * Copyright (C) 2005,2010  Alexey I. Froloff <raorn@altlinux.org>
  *
@@ -24,6 +24,8 @@
 
 #include <glib.h>
 
-gboolean wmvm_do_hal_init(void);
+gboolean wmvm_do_udisks_init(void);
+void udisks_device_mount(const char *object_path);
+void udisks_device_umount(const char *object_path);
 
 #endif
