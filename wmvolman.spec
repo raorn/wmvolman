@@ -1,7 +1,7 @@
 # vim: set ft=spec: -*- rpm-spec -*-
 
 Name: wmvolman
-Version: 0.9
+Version: 1.0
 Release: alt1
 
 Summary: Window Maker Volume Manager
@@ -9,15 +9,14 @@ Group: Graphical desktop/Window Maker
 License: GPLv2
 Url: http://people.altlinux.ru/~raorn/wmvolman.html
 
-Packager: Sir Raorn <raorn@altlinux.ru>
+Requires: udisks >= 1.0.0
 
-PreReq: hal >= 0.5.0
-Requires: pmount
+Packager: Sir Raorn <raorn@altlinux.ru>
 
 Source: http://people.altlinux.ru/~raorn/%name-%version.tar.bz2
 
 # Automatically added by buildreq on Fri May 05 2006
-BuildRequires: libdbus-glib-devel libdockapp-devel libhal-devel libXpm-devel libXt-devel pkg-config
+BuildRequires: libdbus-glib-devel libdockapp-devel udisks-devel
 
 %description
 wmVolMan is a small volume manager for Window Maker. For now
@@ -27,29 +26,29 @@ from the system. It uses D-BUS and HAL to listen for new
 devices.
 
 %prep
-%setup -q
+%setup
 
 %build
-%__autoreconf
-%configure \
-	--with-mount=%_bindir/pmount-hal \
-	--with-mount-arg=udi \
-	--with-umount=%_bindir/pumount \
-	--with-umount-arg=device
+%autoreconf
+%configure
 %make_build
 
 %install
-%make_install DESTDIR=%buildroot install
+%makeinstall_std
 
 %files
 %doc AUTHORS NEWS README
 %_bindir/%name
-%_datadir/hal/fdi/information/20thirdparty/*.fdi
 %dir %_datadir/%name/
 %dir %_datadir/%name/default/
 %_datadir/%name/default/*.xpm
 
 %changelog
+* Mon Oct 04 2010 Alexey I. Froloff <raorn@altlinux.org> 1.0-alt1
+- [1.0]
+ + Rewritten from HAL to UDisks
+ + New icons for BlueRay and HD DVD media
+
 * Thu Jan 03 2008 Sir Raorn <raorn@altlinux.ru> 0.9-alt1
 - [0.9]
  + Gracefully handle DBus and Hal restarts

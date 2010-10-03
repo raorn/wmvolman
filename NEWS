@@ -1,3 +1,11 @@
+wmVolMan 1.0
+~~~~~~~~~~~~
+
+Release October 4, 2010
+
+ - Rewritten from HAL to UDisks
+ - New icons for BlueRay and HD DVD media
+
 wmVolMan 0.9
 ~~~~~~~~~~~~
 
