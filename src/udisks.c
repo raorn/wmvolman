@@ -258,16 +258,16 @@ static void udisks_device_added(DBusGProxy *proxy, const char *object_path, gpoi
 				if (g_value_get_boolean(val) == TRUE) {
 					icon = WMVM_ICON_REMOVABLE;
 
-					if (drive_iface != NULL && strcmp(drive_iface, "usb"))
+					if (drive_iface != NULL && strcmp(drive_iface, "usb") == 0)
 						icon = WMVM_ICON_REMOVABLE_USB;
-					else if (drive_iface != NULL && strcmp(drive_iface, "firewire"))
+					else if (drive_iface != NULL && strcmp(drive_iface, "firewire") == 0)
 						icon = WMVM_ICON_REMOVABLE_1394;
 				} else {
 					icon = WMVM_ICON_HARDDISK;
 
-					if (drive_iface != NULL && strcmp(drive_iface, "usb"))
+					if (drive_iface != NULL && strcmp(drive_iface, "usb") == 0)
 						icon = WMVM_ICON_HARDDISK_USB;
-					else if (drive_iface != NULL && strcmp(drive_iface, "firewire"))
+					else if (drive_iface != NULL && strcmp(drive_iface, "firewire") == 0)
 						icon = WMVM_ICON_HARDDISK_1394;
 				}
 			}
