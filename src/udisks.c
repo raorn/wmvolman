@@ -26,407 +26,374 @@
 #include <stdio.h>
 #include <string.h>
 #include <glib.h>
-#include <glib-object.h>
-#include <dbus/dbus.h>
-#include <dbus/dbus-glib.h>
-#include <dbus/dbus-glib-lowlevel.h>
+#include <gio/gio.h>
+#include <udisks/udisks.h>
 
 #include "udisks.h"
 #include "ui.h"
 
-#include "udisks-daemon-glue.h"
-#include "udisks-device-glue.h"
+static UDisksClient *udisks_client = NULL;
 
-#include "udisks-marshal.h"
-
-static DBusGConnection *dbus_bus = NULL;
-static DBusGProxy *udisks_proxy = NULL;
-
-static GHashTable *_get_device_props(DBusGProxy *proxy, const char *object_path)
+static gboolean _monitor_has_name_owner(void)
 {
-	DBusGProxy *prop_proxy;
-	GError *error;
-	GHashTable *device_props;
+	gchar *name_owner;
+	gboolean ret;
 
-	prop_proxy = dbus_g_proxy_new_for_name(dbus_bus, "org.freedesktop.UDisks", object_path, "org.freedesktop.DBus.Properties");
-	error = NULL;
-	device_props = NULL;
-	if (!dbus_g_proxy_call(prop_proxy,
-						   "GetAll",
-						   &error,
-						   G_TYPE_STRING,
-						   "org.freedesktop.UDisks.Device",
-						   G_TYPE_INVALID,
-						   dbus_g_type_get_map("GHashTable", G_TYPE_STRING, G_TYPE_VALUE),
-						   &device_props,
-						   G_TYPE_INVALID))
-		g_message("Couldn't call GetAll() to get properties for %s: %s", object_path, error->message);
+	name_owner = g_dbus_object_manager_client_get_name_owner(G_DBUS_OBJECT_MANAGER_CLIENT(udisks_client_get_object_manager(udisks_client)));
+	ret = (name_owner != NULL);
+	g_free(name_owner);
 
-	g_object_unref(prop_proxy);
-	return device_props;
+	return ret;
 }
 
-static gboolean _device_should_display(GHashTable *device_props)
+static gboolean _device_should_display(UDisksBlock *block, UDisksDrive *drive)
 {
-	GValue *val;
-
 	/* Do not show system devices */
-	if ((val = g_hash_table_lookup(device_props, "DeviceIsSystemInternal")) != NULL &&
-		g_value_get_boolean(val) == TRUE)
+	if (udisks_block_get_hint_system(block))
 		return FALSE;
 
-	if ((val = g_hash_table_lookup(device_props, "DeviceIsOpticalDisc")) != NULL &&
-		g_value_get_boolean(val) == TRUE) {
+	/* Do not show ignored devices */
+	if (udisks_block_get_hint_ignore(block))
+		return FALSE;
+
+	if (drive && udisks_drive_get_optical(drive)) {
 		/* Do not show removable devices without media */
-		if ((val = g_hash_table_lookup(device_props, "DeviceIsMediaAvailable")) != NULL &&
-			g_value_get_boolean(val) == FALSE)
+		if (!udisks_drive_get_media_available(drive))
 			return FALSE;
 	} else {
-		/* Do not show non-removable devices without filesystem */
-		if ((val = g_hash_table_lookup(device_props, "IdUsage")) != NULL &&
-			strcmp(g_value_get_string(val), "filesystem") != 0)
+		/* Do not show devices without filesystem */
+		if (g_strcmp0(udisks_block_get_id_usage(block), "filesystem") != 0)
 			return FALSE;
 	}
 
 	return TRUE;
 }
 
-static gboolean _device_should_mount(GHashTable *device_props)
+static gboolean _device_should_mount(UDisksBlock *block, UDisksDrive *drive)
 {
-	GValue *val;
-
-	/* Only mount devices with filesystem */
-	if ((val = g_hash_table_lookup(device_props, "IdUsage")) != NULL &&
-		strcmp(g_value_get_string(val), "filesystem") != 0)
+	if (g_strcmp0(udisks_block_get_id_usage(block), "filesystem") != 0)
 		return FALSE;
 
 	return TRUE;
 }
 
-static void udisks_device_changed(DBusGProxy *proxy, const char *object_path, gpointer user_data)
+static void _update_object(GDBusObject *object, gboolean is_added)
 {
-	GHashTable *device_props;
-	GValue *val;
-	char *mountpoint;
-	gboolean mounted;
+	const gchar *object_path;
+	UDisksBlock *block;
+	UDisksFilesystem *filesystem;
+	UDisksJob *job;
 
-	if ((device_props = _get_device_props(proxy, object_path)) == NULL)
-		return;
+	object_path = g_dbus_object_get_object_path(object);
 
-	mounted = FALSE;
-	if ((val = g_hash_table_lookup(device_props, "DeviceIsMounted")) != NULL)
-		mounted = g_value_get_boolean(val);
+	if ((block = udisks_object_peek_block(UDISKS_OBJECT(object))) != NULL) {
 
-	mountpoint = NULL;
-	if (mounted == TRUE &&
-		(val = g_hash_table_lookup(device_props, "DeviceMountPaths")) != NULL)
-		mountpoint = ((gchar **) g_value_get_boxed(val))[0];
+		UDisksDrive *drive = NULL;
+		const char *device;
+		int icon;
+		gboolean mountable;
+		gboolean busy;
 
-	wmvm_volume_set_mount_status(object_path, mountpoint, mounted);
-
-	g_hash_table_unref(device_props);
-	return;
-}
-
-static void udisks_device_job_changed(DBusGProxy *proxy,
-									  const char *object_path,
-									  gboolean job_in_progress,
-									  const char *job_id,
-									  guint32 job_initiated_by_uid,
-									  gboolean job_is_cancellable,
-									  double job_percentage,
-									  gpointer user_data)
-{
-	wmvm_volume_set_busy(object_path, job_in_progress);
-}
-
-static void udisks_device_added(DBusGProxy *proxy, const char *object_path, gpointer user_data)
-{
-	GHashTable *device_props;
-	GValue *val;
-	const char *device;
-	int icon;
-	gboolean mountable;
-	gboolean busy;
-
-	if ((device_props = _get_device_props(proxy, object_path)) == NULL)
-		return;
-
-	if (!_device_should_display(device_props))
-		goto out;
-
-	if ((val = g_hash_table_lookup(device_props, "DeviceFilePresentation")) == NULL ||
-		(device = g_value_get_string(val)) == NULL)
-		goto out;
-
-	mountable = _device_should_mount(device_props);
-
-	icon = WMVM_ICON_UNKNOWN;
-
-	if ((val = g_hash_table_lookup(device_props, "DeviceIsOpticalDisc")) != NULL &&
-		g_value_get_boolean(val) == TRUE) {
-		if (mountable == FALSE &&
-			(val = g_hash_table_lookup(device_props, "OpticalDiscNumAudioTracks")) != NULL &&
-			g_value_get_uint(val) > 0) {
-			icon = WMVM_ICON_CDAUDIO;
-		} else {
-			const char *disk_type = NULL;
-
-			if ((val = g_hash_table_lookup(device_props, "DriveMedia")) != NULL)
-				disk_type = g_value_get_string(val);
-
-#define DISK_IS(t) disk_type != NULL && strcmp(disk_type, (t)) == 0
-			if (DISK_IS("optical_cd")) {
-				icon = WMVM_ICON_CDROM;
-			} else if (DISK_IS("optical_cd_r")) {
-				icon = WMVM_ICON_CDR;
-			} else if (DISK_IS("optical_cd_rw")) {
-				icon = WMVM_ICON_CDRW;
-			} else if (DISK_IS("optical_dvd")) {
-				icon = WMVM_ICON_DVDROM;
-			} else if (DISK_IS("optical_dvd_r")) {
-				icon = WMVM_ICON_DVDR;
-			} else if (DISK_IS("optical_dvd_rw")) {
-				icon = WMVM_ICON_DVDRW;
-			} else if (DISK_IS("optical_dvd_ram")) {
-				icon = WMVM_ICON_DVDRAM;
-			} else if (DISK_IS("optical_dvd_plus_r")) {
-				icon = WMVM_ICON_DVDPLUSR;
-			} else if (DISK_IS("optical_dvd_plus_rw")) {
-				icon = WMVM_ICON_DVDPLUSRW;
-			} else if (DISK_IS("optical_dvd_plus_r_dl")) {
-				icon = WMVM_ICON_DVDPLUSR;
-			} else if (DISK_IS("optical_dvd_plus_rw_dl")) {
-				icon = WMVM_ICON_DVDPLUSRW;
-			} else if (DISK_IS("optical_bd")) {
-				icon = WMVM_ICON_BD;
-			} else if (DISK_IS("optical_bd_r")) {
-				icon = WMVM_ICON_BDR;
-			} else if (DISK_IS("optical_bd_re")) {
-				icon = WMVM_ICON_BDRE;
-			} else if (DISK_IS("optical_hddvd")) {
-				icon = WMVM_ICON_HDDVD;
-			} else if (DISK_IS("optical_hddvd_r")) {
-				icon = WMVM_ICON_HDDVDR;
-			} else if (DISK_IS("optical_hddvd_rw")) {
-				icon = WMVM_ICON_HDDVDRW;
-			}
-#undef DISK_IS
-		}
-	} else {
-		GHashTable *drive_props;
-		const char *drive_path;
-		const char *media_type;
-
-		drive_path = NULL;
-		if ((val = g_hash_table_lookup(device_props, "PartitionSlave")) != NULL) {
-			drive_path = g_value_get_boxed(val);
+		if (!is_added) {
+			wmvm_remove_volume(object_path);
+			goto out_block;
 		}
 
-		if (drive_path == NULL ||
-			(drive_props = _get_device_props(proxy, drive_path)) == NULL)
-			drive_props = device_props;
+		drive = udisks_client_get_drive_for_block(udisks_client, block);
 
-		media_type = NULL;
+		if (!_device_should_display(block, drive)) {
+			wmvm_remove_volume(object_path);
+			goto out_block;
+		}
 
-		if ((val = g_hash_table_lookup(drive_props, "DriveMedia")) != NULL)
-			media_type = g_value_get_string(val);
+		if ((device = udisks_block_get_device(block)) == NULL) {
+			wmvm_remove_volume(object_path);
+			goto out_block;
+		}
 
-#define MEDIA_IS(t) media_type != NULL && strcmp(media_type, (t)) == 0
-		if (MEDIA_IS("flash")) {
-			icon = WMVM_ICON_CARD_CF;
-		} else if (MEDIA_IS("flash_cf")) {
-			icon = WMVM_ICON_CARD_CF;
-		} else if (MEDIA_IS("flash_ms")) {
-			icon = WMVM_ICON_CARD_MS;
-		} else if (MEDIA_IS("flash_sm")) {
-			icon = WMVM_ICON_CARD_SM;
-		} else if (MEDIA_IS("flash_sd")) {
-			icon = WMVM_ICON_CARD_SDMMC;
-		} else if (MEDIA_IS("flash_sdhc")) {
-			icon = WMVM_ICON_CARD_SDMMC;
-		} else if (MEDIA_IS("flash_mmc")) {
-			icon = WMVM_ICON_CARD_SDMMC;
-		} else {
-			const char *drive_iface;
+		mountable = _device_should_mount(block, drive);
 
-			drive_iface = NULL;
-			if ((val = g_hash_table_lookup(drive_props, "DriveConnectionInterface")) != NULL)
-				drive_iface = g_value_get_string(val);
+		icon = WMVM_ICON_UNKNOWN;
 
-			if ((val = g_hash_table_lookup(drive_props, "DeviceIsRemovable")) != NULL) {
-				if (g_value_get_boolean(val) == TRUE) {
-					icon = WMVM_ICON_REMOVABLE;
+		if (drive) {
+			const char *media = udisks_drive_get_media(drive);
 
-					if (drive_iface != NULL && strcmp(drive_iface, "usb") == 0)
-						icon = WMVM_ICON_REMOVABLE_USB;
-					else if (drive_iface != NULL && strcmp(drive_iface, "firewire") == 0)
-						icon = WMVM_ICON_REMOVABLE_1394;
+			if (udisks_drive_get_optical(drive)) {
+				if (mountable == FALSE && udisks_drive_get_optical_num_audio_tracks(drive) > 0) {
+					icon = WMVM_ICON_CDAUDIO;
 				} else {
-					icon = WMVM_ICON_HARDDISK;
-
-					if (drive_iface != NULL && strcmp(drive_iface, "usb") == 0)
-						icon = WMVM_ICON_HARDDISK_USB;
-					else if (drive_iface != NULL && strcmp(drive_iface, "firewire") == 0)
-						icon = WMVM_ICON_HARDDISK_1394;
+#define DISK_IS(t) g_strcmp0(media, (t)) == 0
+					if (DISK_IS("optical_cd")) {
+						icon = WMVM_ICON_CDROM;
+					} else if (DISK_IS("optical_cd_r")) {
+						icon = WMVM_ICON_CDR;
+					} else if (DISK_IS("optical_cd_rw")) {
+						icon = WMVM_ICON_CDRW;
+					} else if (DISK_IS("optical_dvd")) {
+						icon = WMVM_ICON_DVDROM;
+					} else if (DISK_IS("optical_dvd_r")) {
+						icon = WMVM_ICON_DVDR;
+					} else if (DISK_IS("optical_dvd_rw")) {
+						icon = WMVM_ICON_DVDRW;
+					} else if (DISK_IS("optical_dvd_ram")) {
+						icon = WMVM_ICON_DVDRAM;
+					} else if (DISK_IS("optical_dvd_plus_r")) {
+						icon = WMVM_ICON_DVDPLUSR;
+					} else if (DISK_IS("optical_dvd_plus_rw")) {
+						icon = WMVM_ICON_DVDPLUSRW;
+					} else if (DISK_IS("optical_dvd_plus_r_dl")) {
+						icon = WMVM_ICON_DVDPLUSR;
+					} else if (DISK_IS("optical_dvd_plus_rw_dl")) {
+						icon = WMVM_ICON_DVDPLUSRW;
+					} else if (DISK_IS("optical_bd")) {
+						icon = WMVM_ICON_BD;
+					} else if (DISK_IS("optical_bd_r")) {
+						icon = WMVM_ICON_BDR;
+					} else if (DISK_IS("optical_bd_re")) {
+						icon = WMVM_ICON_BDRE;
+					} else if (DISK_IS("optical_hddvd")) {
+						icon = WMVM_ICON_HDDVD;
+					} else if (DISK_IS("optical_hddvd_r")) {
+						icon = WMVM_ICON_HDDVDR;
+					} else if (DISK_IS("optical_hddvd_rw")) {
+						icon = WMVM_ICON_HDDVDRW;
+					}
+#undef DISK_IS
 				}
+			} else {
+#define MEDIA_IS(t) g_strcmp0(media, (t)) == 0
+				if (MEDIA_IS("flash")) {
+					icon = WMVM_ICON_CARD_CF;
+				} else if (MEDIA_IS("flash_cf")) {
+					icon = WMVM_ICON_CARD_CF;
+				} else if (MEDIA_IS("flash_ms")) {
+					icon = WMVM_ICON_CARD_MS;
+				} else if (MEDIA_IS("flash_sm")) {
+					icon = WMVM_ICON_CARD_SM;
+				} else if (MEDIA_IS("flash_sd")) {
+					icon = WMVM_ICON_CARD_SDMMC;
+				} else if (MEDIA_IS("flash_sdhc")) {
+					icon = WMVM_ICON_CARD_SDMMC;
+				} else if (MEDIA_IS("flash_mmc")) {
+					icon = WMVM_ICON_CARD_SDMMC;
+				} else {
+					const char *drive_iface = udisks_drive_get_connection_bus(drive);
+
+					if (udisks_drive_get_removable(drive)) {
+						icon = WMVM_ICON_REMOVABLE;
+
+						if (g_strcmp0(drive_iface, "usb") == 0)
+							icon = WMVM_ICON_REMOVABLE_USB;
+						else if (g_strcmp0(drive_iface, "ieee1394") == 0)
+							icon = WMVM_ICON_REMOVABLE_1394;
+						/*else if (g_strcmp0(drive_iface, "sdio") == 0)
+						  icon = WMVM_ICON_REMOVABLE_SDIO;*/
+					} else {
+						icon = WMVM_ICON_HARDDISK;
+
+						if (g_strcmp0(drive_iface, "usb") == 0)
+							icon = WMVM_ICON_HARDDISK_USB;
+						else if (g_strcmp0(drive_iface, "ieee1394") == 0)
+							icon = WMVM_ICON_HARDDISK_1394;
+						/*else if (g_strcmp0(drive_iface, "sdio") == 0)
+						  icon = WMVM_ICON_HARDDISK_SDIO;*/
+					}
+				}
+#undef MEDIA_IS
 			}
 		}
-#undef MEDIA_IS
 
-		if (drive_props != device_props)
-			g_hash_table_unref(drive_props);
+		wmvm_update_volume(object_path, device, icon, mountable);
+
+		busy = FALSE;
+		{
+			GList *jobs = udisks_client_get_jobs_for_object(udisks_client, UDISKS_OBJECT(object));
+
+			busy = g_list_length(jobs) > 0;
+
+			g_list_foreach(jobs, (GFunc) g_object_unref, NULL);
+			g_list_free(jobs);
+		}
+
+		wmvm_volume_set_busy(object_path, busy);
+
+out_block:
+		if (drive)
+			g_object_unref(drive);
 	}
 
-	wmvm_add_volume(object_path, device, icon, mountable);
-	udisks_device_changed(proxy, object_path, user_data);
+	if ((job = udisks_object_peek_job(UDISKS_OBJECT(object))) != NULL) {
+		const gchar *const *objects;
 
-	busy = FALSE;
-	if ((val = g_hash_table_lookup(device_props, "JobInProgress")) != NULL)
-		busy = g_value_get_boolean(val);
+		for (objects = udisks_job_get_objects(job); objects && *objects; objects++)
+			wmvm_volume_set_busy(*objects, is_added);
+	}
 
-	wmvm_volume_set_busy(object_path, busy);
+	if ((filesystem = udisks_object_peek_filesystem(UDISKS_OBJECT(object))) != NULL) {
+		const gchar *const *mountpoints = udisks_filesystem_get_mount_points(filesystem);
 
-out:
-	g_hash_table_unref(device_props);
+		if (mountpoints != NULL && *mountpoints != NULL) {
+			wmvm_volume_set_mount_status(object_path, *mountpoints, TRUE);
+		} else {
+			wmvm_volume_set_mount_status(object_path, NULL, FALSE);
+		}
+	}
+
+	/* if (( = udisks_object_peek_(object)) != NULL) {
+	}*/
+
 	return;
 }
 
-static void udisks_device_removed(DBusGProxy *proxy, const char *object_path, gpointer user_data)
+static void udisks_object_added(GDBusObjectManager *manager, GDBusObject *object, gpointer user_data)
 {
-	wmvm_remove_volume(object_path);
+	if (!_monitor_has_name_owner())
+		return;
+
+	_update_object(object, TRUE);
 }
 
-static void udisks_device_mount_cb(DBusGProxy *proxy, char * mountpath, GError *error, gpointer userdata)
+static void udisks_object_removed(GDBusObjectManager *manager, GDBusObject *object, gpointer user_data)
 {
-	wmvm_volume_set_error(dbus_g_proxy_get_path(proxy), error != NULL);
+	if (!_monitor_has_name_owner())
+		return;
+
+	_update_object(object, FALSE);
+}
+
+static void udisks_interface_added(GDBusObjectManager *manager, GDBusObject *object, GDBusInterface *interface, gpointer user_data)
+{
+	if (!_monitor_has_name_owner())
+		return;
+
+	_update_object(object, TRUE);
+}
+
+static void udisks_interface_removed(GDBusObjectManager *manager, GDBusObject *object, GDBusInterface *interface, gpointer user_data)
+{
+	if (!_monitor_has_name_owner())
+		return;
+
+	_update_object(object, FALSE);
+}
+
+static void udisks_interface_proxy_properties_changed(GDBusObjectManagerClient *manager,
+													  GDBusObjectProxy *object_proxy,
+													  GDBusProxy *interface_proxy,
+													  GVariant *changed_properties,
+													  const gchar* const *invalidated_properties,
+													  gpointer user_data)
+{
+	const gchar *object_path;
+	UDisksObject *object;
+
+	object_path = g_dbus_object_get_object_path(G_DBUS_OBJECT(object_proxy));
+	object = udisks_client_get_object(udisks_client, object_path);
+
+	_update_object(G_DBUS_OBJECT(object), TRUE);
+
+	g_object_unref(object);
+}
+
+static void udisks_device_mount_cb(GObject *source_object, GAsyncResult *res, gpointer user_data)
+{
+	GError *error;
+
+	error = NULL;
+	wmvm_volume_set_error(g_dbus_object_get_object_path(g_dbus_interface_get_object(G_DBUS_INTERFACE(source_object))),
+						  !udisks_filesystem_call_mount_finish(UDISKS_FILESYSTEM(source_object), NULL, res, &error));
+
 	return;
 }
 
 void udisks_device_mount(const char *object_path)
 {
-	DBusGProxy *proxy;
+	UDisksObject *object;
+	UDisksFilesystem *filesystem;
+	GVariantBuilder builder;
 
-	proxy = dbus_g_proxy_new_for_name (dbus_bus, "org.freedesktop.UDisks", object_path, "org.freedesktop.UDisks.Device");
-	org_freedesktop_UDisks_Device_filesystem_mount_async(proxy, NULL, NULL, udisks_device_mount_cb, NULL);
+	object = udisks_client_get_object(udisks_client, object_path);
+	filesystem = udisks_object_peek_filesystem(UDISKS_OBJECT(object));
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_VARDICT);
+
+	udisks_filesystem_call_mount(filesystem, g_variant_builder_end(&builder), NULL, udisks_device_mount_cb, NULL);
 }
 
-static void udisks_device_umount_cb(DBusGProxy *proxy, GError *error, gpointer userdata)
+static void udisks_device_unmount_cb(GObject *source_object, GAsyncResult *res, gpointer user_data)
 {
-	wmvm_volume_set_error(dbus_g_proxy_get_path(proxy), error != NULL);
+	GError *error;
+
+	error = NULL;
+	wmvm_volume_set_error(g_dbus_object_get_object_path(g_dbus_interface_get_object(G_DBUS_INTERFACE(source_object))),
+						  !udisks_filesystem_call_unmount_finish(UDISKS_FILESYSTEM(source_object), res, &error));
+
 	return;
 }
 
-void udisks_device_umount(const char *object_path)
+void udisks_device_unmount(const char *object_path)
 {
-	DBusGProxy *proxy;
+	UDisksObject *object;
+	UDisksFilesystem *filesystem;
+	GVariantBuilder builder;
 
-	proxy = dbus_g_proxy_new_for_name (dbus_bus, "org.freedesktop.UDisks", object_path, "org.freedesktop.UDisks.Device");
-	org_freedesktop_UDisks_Device_filesystem_unmount_async(proxy, NULL, udisks_device_umount_cb, NULL);
-}
+	object = udisks_client_get_object(udisks_client, object_path);
+	filesystem = udisks_object_peek_filesystem(UDISKS_OBJECT(object));
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_VARDICT);
 
-static gboolean reinit_udisks_connection(gpointer data);
-
-static DBusHandlerResult signal_filter(DBusConnection *connection, DBusMessage *message, void *user_data)
-{
-	if (dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_SIGNAL)
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-
-	if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL, "Disconnected")) {
-		g_message("Disconnected from DBus");
-		g_object_unref(udisks_proxy);
-		udisks_proxy = NULL;
-		dbus_g_connection_unref(dbus_bus);
-		dbus_bus = NULL;
-		g_timeout_add(1000, reinit_udisks_connection, NULL);
-		return DBUS_HANDLER_RESULT_HANDLED;
-	}
-
-	return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+	udisks_filesystem_call_unmount(filesystem, g_variant_builder_end(&builder), NULL, udisks_device_unmount_cb, NULL);
 }
 
 static gboolean init_udisks_connection(void)
 {
 	GError *error;
+	GDBusObjectManager *manager;
 
 	error = NULL;
-	if (dbus_bus == NULL) {
-		dbus_bus = dbus_g_bus_get(DBUS_BUS_SYSTEM, &error);
-		if (dbus_bus == NULL) {
-			g_message("Error connecting to message bus: %s", error->message);
-			g_error_free(error);
-			return FALSE;
-		}
-		// faggots from #dbus may go screw themselves
-		dbus_connection_set_exit_on_disconnect(dbus_g_connection_get_connection(dbus_bus), FALSE);
-		dbus_connection_add_filter(dbus_g_connection_get_connection(dbus_bus), signal_filter, NULL, NULL);
-	}
+	if (udisks_client == NULL) {
+		udisks_client = udisks_client_new_sync(NULL, &error);
 
-	if (udisks_proxy == NULL) {
-		udisks_proxy = dbus_g_proxy_new_for_name(dbus_bus,
-												  "org.freedesktop.UDisks",
-												  "/org/freedesktop/UDisks",
-												  "org.freedesktop.UDisks");
+		manager = udisks_client_get_object_manager(udisks_client);
 
-		dbus_g_proxy_add_signal(udisks_proxy, "DeviceAdded", DBUS_TYPE_G_OBJECT_PATH, G_TYPE_INVALID);
-		dbus_g_proxy_add_signal(udisks_proxy, "DeviceRemoved", DBUS_TYPE_G_OBJECT_PATH, G_TYPE_INVALID);
-		dbus_g_proxy_add_signal(udisks_proxy, "DeviceChanged", DBUS_TYPE_G_OBJECT_PATH, G_TYPE_INVALID);
-		dbus_g_proxy_add_signal(udisks_proxy, "DeviceJobChanged", DBUS_TYPE_G_OBJECT_PATH,
-																  G_TYPE_BOOLEAN,
-																  G_TYPE_STRING,
-																  G_TYPE_UINT,
-																  G_TYPE_BOOLEAN,
-																  G_TYPE_DOUBLE,
-																  G_TYPE_INVALID);
-
-		dbus_g_proxy_connect_signal(udisks_proxy, "DeviceAdded", G_CALLBACK(udisks_device_added), NULL, NULL);
-		dbus_g_proxy_connect_signal(udisks_proxy, "DeviceRemoved", G_CALLBACK(udisks_device_removed), NULL, NULL);
-		dbus_g_proxy_connect_signal(udisks_proxy, "DeviceChanged", G_CALLBACK(udisks_device_changed), NULL, NULL);
-		dbus_g_proxy_connect_signal(udisks_proxy, "DeviceJobChanged", G_CALLBACK(udisks_device_job_changed), NULL, NULL);
+		g_signal_connect(manager,
+						 "object-added",
+						 G_CALLBACK(udisks_object_added),
+						 NULL);
+		g_signal_connect(manager,
+						 "object-removed",
+						 G_CALLBACK(udisks_object_removed),
+						 NULL);
+		g_signal_connect(manager,
+						 "interface-added",
+						 G_CALLBACK(udisks_interface_added),
+						 NULL);
+		g_signal_connect(manager,
+						 "interface-removed",
+						 G_CALLBACK(udisks_interface_removed),
+						 NULL);
+		g_signal_connect(manager,
+						 "interface-proxy-properties-changed",
+						 G_CALLBACK(udisks_interface_proxy_properties_changed),
+						 NULL);
 	}
 
 	return TRUE;
 }
 
-static gboolean reinit_udisks_connection(gpointer data)
-{
-	return !init_udisks_connection();
-}
-
 gboolean wmvm_do_udisks_init(void)
 {
-	GPtrArray *devices;
-	GError *error;
-	int n;
+	GList *objects;
 
 	g_type_init();
-
-	dbus_g_object_register_marshaller (udisks_marshal_VOID__BOXED_BOOLEAN_STRING_UINT_BOOLEAN_DOUBLE,
-									   G_TYPE_NONE,
-									   DBUS_TYPE_G_OBJECT_PATH,
-									   G_TYPE_BOOLEAN,
-									   G_TYPE_STRING,
-									   G_TYPE_UINT,
-									   G_TYPE_BOOLEAN,
-									   G_TYPE_DOUBLE,
-									   G_TYPE_INVALID);
 
 	if (!init_udisks_connection()) {
 		return FALSE;
 	}
 
-	/* prime the list of devices */
-	error = NULL;
-	if (!org_freedesktop_UDisks_enumerate_devices(udisks_proxy, &devices, &error)) {
-		g_message("Error enumerating devices: %s", error->message);
-		g_error_free(error);
-		return FALSE;
-	}
+	objects = g_dbus_object_manager_get_objects(udisks_client_get_object_manager(udisks_client));
 
-	for (n = 0; n < (int) devices->len; n++)
-		udisks_device_added(udisks_proxy, g_ptr_array_index(devices, n), NULL);
-	g_ptr_array_foreach(devices, (GFunc) g_free, NULL);
-	g_ptr_array_free(devices, TRUE);
+	g_list_foreach(objects, (GFunc) _update_object, (gpointer) TRUE);
+	g_list_foreach(objects, (GFunc) g_object_unref, NULL);
+	g_list_free(objects);
 
 	return TRUE;
 }

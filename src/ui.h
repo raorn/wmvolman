@@ -56,7 +56,7 @@ enum WMVMIconName {
 
 void wmvm_update_icon(void);
 gboolean wmvm_is_managed_volume(const char *udi);
-void wmvm_add_volume(const char *udi, const char *device, int icon, gboolean mountable);
+void wmvm_update_volume(const char *udi, const char *device, int icon, gboolean mountable);
 void wmvm_remove_volume(const char *udi);
 void wmvm_remove_all_volumes(void);
 void wmvm_volume_set_mount_status(const char *udi, const char *mountpoint, gboolean mounted);

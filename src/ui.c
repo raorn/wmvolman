@@ -346,7 +346,7 @@ static void wmvm_mountumount(void)
 			return;
 
 		if (current->mounted) {
-			udisks_device_umount(current->udi);
+			udisks_device_unmount(current->udi);
 		} else {
 			udisks_device_mount(current->udi);
 		}
@@ -473,19 +473,29 @@ gboolean wmvm_is_managed_volume(const char *udi)
 	return (wmvm_find_volume(udi) != NULL);
 }
 
-void wmvm_add_volume(const char *udi, const char *device, int icon, gboolean mountable)
+void wmvm_update_volume(const char *udi, const char *device, int icon, gboolean mountable)
 {
 	WMVMVolume *vol;
+	gboolean is_new;
 
 	if (udi == NULL || device == NULL)
 		return;
 
-	vol = calloc(1, sizeof(WMVMVolume));
-	if (vol == NULL)
-		return;
+	is_new = FALSE;
+	vol = wmvm_find_volume(udi);
 
-	vol->udi = strdup(udi);
-	vol->device = strdup(device);
+	if (vol == NULL) {
+		is_new = TRUE;
+		vol = calloc(1, sizeof(WMVMVolume));
+
+		if (vol == NULL)
+			return;
+	}
+
+	if (is_new) {
+		vol->udi = strdup(udi);
+		vol->device = strdup(device);
+	}
 	vol->mountable = mountable;
 	vol->busy = FALSE;
 	vol->error = FALSE;
@@ -494,9 +504,11 @@ void wmvm_add_volume(const char *udi, const char *device, int icon, gboolean mou
 	else
 		vol->icon = wmvm_device_icons[WMVM_ICON_UNKNOWN];
 
-	wmvm_set_title(vol);
+	if (is_new) {
+		wmvm_set_title(vol);
 
-	wmvm_volumes = g_list_append(wmvm_volumes, vol);
+		wmvm_volumes = g_list_append(wmvm_volumes, vol);
+	}
 
 	if (pressed == -1 || current == NULL) {
 		wmvm_update_button_state(vol);

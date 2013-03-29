@@ -26,6 +26,6 @@
 
 gboolean wmvm_do_udisks_init(void);
 void udisks_device_mount(const char *object_path);
-void udisks_device_umount(const char *object_path);
+void udisks_device_unmount(const char *object_path);
 
 #endif
