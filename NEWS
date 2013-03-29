@@ -1,3 +1,11 @@
+wmVolMan 2.0
+~~~~~~~~~~~~
+
+Release March 29, 2012
+
+ - Rewritten from UDisks to UDisks2
+ - Fixed USB/FireWire icon selection
+
 wmVolMan 1.0
 ~~~~~~~~~~~~
 
