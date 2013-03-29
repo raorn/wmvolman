@@ -1,4 +1,3 @@
-
  Window Maker Volume Manager
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -12,33 +11,15 @@ COMPILATION
 To compile wmVolMan you must have following development libraries
 and tools installed:
 
-udisks >= 1.0.0
-libdbus-glib
+udisks2 >= 2.0.0
+glib2
 libdockapp >= 0.6.0 (working DAMakeShapedPixmapFromFile() required)
 pkg-config
-
-You will also need (or know) working mount/umount programs.
-wmVolMan checks availability of pmount-hal, pmount, mount and
-pumount, umount and chooses appropriate command line.
 
 
 INSTALLATION
 
 See INSTALL for detailed instructions.
-
-
-CONFIGURATION
-
-wmVolMan uses HAL device properties.  On startup it scans all HAL
-devices.  If device have "wmvolman.should_display" set to "true",
-this device will be displayed in wmVolMan window.  If device have
-"wmvolman.should_mount" set to true, you will be allowed to mount
-this device.
-
-These properties are set from 30-wmvolman.fdi file which is
-installed by default to ${prefix}/etc/hal/fdi/policy/ and used by
-HAL.  You can add you own rules that adds or removes "wmvolman.*"
-properties.  Refer to HAL documentation for more info.
 
 
 THEMES
@@ -135,6 +116,5 @@ LICENSE.  See COPYING for details.
 
 CONTACT AUTHOR
 
-Send bugreports, fixes, wishes etc. to Alexey I. Froloff
-<raorn@altlinux.org>.
-
+Send bugreports, fixes, wishes etc. to
+Alexey I. Froloff  <raorn@raorn.name>
