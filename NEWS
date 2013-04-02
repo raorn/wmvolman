@@ -1,3 +1,10 @@
+wmVolMan 2.0.1
+~~~~~~~~~~~~~~
+
+Release April 2, 2012
+
+ - Fixed FTBFS with glib2 >= 2.36
+
 wmVolMan 2.0
 ~~~~~~~~~~~~
 

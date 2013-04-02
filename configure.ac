@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
 
-AC_INIT([Window Maker Volume Manager],[2.0],[raorn@raorn.name],[wmvolman])
+AC_INIT([Window Maker Volume Manager],[2.0.1],[raorn@raorn.name],[wmvolman])
 AC_CONFIG_SRCDIR([src])
 AM_INIT_AUTOMAKE([dist-bzip2 no-dist-gzip])
 AC_CONFIG_HEADERS([config.h])
